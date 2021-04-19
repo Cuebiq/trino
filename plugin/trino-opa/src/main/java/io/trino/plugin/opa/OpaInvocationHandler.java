@@ -27,7 +27,9 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class OpaInvocationHandler
@@ -38,7 +40,7 @@ public class OpaInvocationHandler
     private static SystemAccessControl allowAllSystemAccessControl = new AllowAllSystemAccessControl();
 
     private ObjectMapper mapper;
-    private OpaQueryApi client = OpaClient.builder()
+    private OpaClient client = OpaClient.builder()
             .opaConfiguration("http://localhost:8181")
             .build();
 
@@ -62,13 +64,20 @@ public class OpaInvocationHandler
         if (returnType.equals(Void.TYPE)) {
             returnType = Boolean.class;
         }
+
         Object result = client.queryForDocument(new QueryForDocumentRequest(input, rulepath(policy)), returnType);
-        if (returnType.equals(Void.TYPE) && result instanceof Boolean) {
+        if (method.getReturnType().equals(Void.TYPE) && result instanceof Boolean) {
             if ((Boolean) result) {
                 return null;
             }
             else {
-                return method.invoke(denyAllSystemAccessControl, args);
+                try {
+                    return method.invoke(denyAllSystemAccessControl, args);
+                }catch (InvocationTargetException ite)
+                {
+                    throw ite.getCause();
+                }
+
             }
         }
         return executeDefaultMethod(method, args);
@@ -89,7 +98,8 @@ public class OpaInvocationHandler
 
     private boolean isPolicyConfigured(String policy)
     {
-        return !policy.equals("getEventListeners");
+        List<String> configured = Arrays.asList("checkCanSetUser");
+        return configured.contains(policy);
     }
 
     private String mapMethodToPolicy(Method method)
