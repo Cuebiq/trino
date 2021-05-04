@@ -343,14 +343,15 @@ final class PrestoDriverUri
     private static void validateConnectionProperties(Properties connectionProperties)
             throws SQLException
     {
+        Properties recognizedProp = new Properties();
         for (String propertyName : connectionProperties.stringPropertyNames()) {
-            if (ConnectionProperties.forKey(propertyName) == null) {
-                throw new SQLException(format("Unrecognized connection property '%s'", propertyName));
+            if (ConnectionProperties.forKey(propertyName) != null) {
+                recognizedProp.put(propertyName, connectionProperties.getProperty(propertyName));
             }
         }
 
         for (ConnectionProperty<?> property : ConnectionProperties.allProperties()) {
-            property.validate(connectionProperties);
+            property.validate(recognizedProp);
         }
     }
 }

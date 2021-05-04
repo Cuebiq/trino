@@ -51,8 +51,9 @@ public class TestPrestoDriverUri
         // has catalog but schema is missing
         assertInvalid("jdbc:presto://localhost:8080/a//", "Schema name is empty:");
 
+        //fbalicchia relax constraints for compatibility with Spark-311
         // unrecognized property
-        assertInvalid("jdbc:presto://localhost:8080/hive/default?ShoeSize=13", "Unrecognized connection property 'ShoeSize'");
+        //assertInvalid("jdbc:presto://localhost:8080/hive/default?ShoeSize=13", "Unrecognized connection property 'ShoeSize'");
 
         // empty property
         assertInvalid("jdbc:presto://localhost:8080/hive/default?SSL=", "Connection property 'SSL' value is empty");
