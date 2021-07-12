@@ -14,6 +14,7 @@
 package io.trino.plugin.opa;
 
 import com.bisnode.opa.client.OpaClient;
+import com.bisnode.opa.client.data.OpaDocument;
 import com.bisnode.opa.client.query.OpaQueryApi;
 import com.bisnode.opa.client.query.QueryForDocumentRequest;
 import com.bisnode.opa.client.rest.ObjectMapperFactory;
@@ -48,6 +49,9 @@ public class OpaInvocationHandler
     {
         this.mapper = ObjectMapperFactory.getInstance().create();
         mapper.registerModule(new Jdk8Module());
+
+//        OpaDocument doc = new OpaDocument("/test","{json}");
+//        client.createOrOverwriteDocument(doc);
     }
 
     @Override

@@ -3,12 +3,14 @@ package io.trino.spi.security.SystemAccessControl
 inputjson := input
 
 default checkCanSetUser = false
+#deprecated
 checkCanSetUser {
-    input.principal.name == input.username
+    checkCanImpersonateUser
 }
 
 default checkCanImpersonateUser = false
-checkCanImpersonateUser {
+
+checkCanImpersonateUser = true {
     input.context.identity.user == "admin"
 }
 checkCanImpersonateUser {

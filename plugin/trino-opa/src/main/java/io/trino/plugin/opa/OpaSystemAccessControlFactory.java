@@ -38,6 +38,8 @@ public class OpaSystemAccessControlFactory implements SystemAccessControlFactory
                 .doNotInitializeLogging()
                 .setRequiredConfigurationProperties(config)
                 .initialize();
+
+
         return injector.getInstance(SystemAccessControl.class);
     }
 }
