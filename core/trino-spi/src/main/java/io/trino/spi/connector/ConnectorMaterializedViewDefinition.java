@@ -17,8 +17,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.trino.spi.type.TypeId;
 
-import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,44 +27,27 @@ import static java.util.Objects.requireNonNull;
 public class ConnectorMaterializedViewDefinition
 {
     private final String originalSql;
-    private final String storageTable;
+    private final Optional<CatalogSchemaTableName> storageTable;
     private final Optional<String> catalog;
     private final Optional<String> schema;
     private final List<Column> columns;
     private final Optional<String> comment;
-    private final Optional<String> owner;
+    private final String owner;
     private final Map<String, Object> properties;
 
-    public ConnectorMaterializedViewDefinition(
-            @JsonProperty("originalSql") String originalSql,
-            @JsonProperty("storageTable") Optional<String> storageTable,
-            @JsonProperty("catalog") Optional<String> catalog,
-            @JsonProperty("schema") Optional<String> schema,
-            @JsonProperty("columns") List<Column> columns,
-            @JsonProperty("comment") Optional<String> comment,
-            @JsonProperty("owner") Optional<String> owner,
-            @JsonProperty("properties") Map<String, Object> properties)
-    {
-        this(originalSql, requireNonNull(storageTable, "storageTable is null").orElse(null), catalog, schema, columns, comment, owner, properties);
-    }
-
-    /*
-     * This constructor is for JSON deserialization only. Do not use.
-     */
-    @Deprecated
     @JsonCreator
     public ConnectorMaterializedViewDefinition(
             @JsonProperty("originalSql") String originalSql,
-            @JsonProperty("storageTable") @Nullable String storageTable,
+            @JsonProperty("storageTable") Optional<CatalogSchemaTableName> storageTable,
             @JsonProperty("catalog") Optional<String> catalog,
             @JsonProperty("schema") Optional<String> schema,
             @JsonProperty("columns") List<Column> columns,
             @JsonProperty("comment") Optional<String> comment,
-            @JsonProperty("owner") Optional<String> owner,
+            @JsonProperty("owner") String owner,
             @JsonProperty("properties") Map<String, Object> properties)
     {
         this.originalSql = requireNonNull(originalSql, "originalSql is null");
-        this.storageTable = storageTable;
+        this.storageTable = requireNonNull(storageTable, "storageTable is null");
         this.catalog = requireNonNull(catalog, "catalog is null");
         this.schema = requireNonNull(schema, "schema is null");
         this.columns = List.copyOf(requireNonNull(columns, "columns is null"));
@@ -89,8 +70,7 @@ public class ConnectorMaterializedViewDefinition
     }
 
     @JsonProperty
-    @Nullable
-    public String getStorageTable()
+    public Optional<CatalogSchemaTableName> getStorageTable()
     {
         return storageTable;
     }
@@ -120,7 +100,7 @@ public class ConnectorMaterializedViewDefinition
     }
 
     @JsonProperty
-    public Optional<String> getOwner()
+    public String getOwner()
     {
         return owner;
     }
@@ -136,12 +116,12 @@ public class ConnectorMaterializedViewDefinition
     {
         StringJoiner joiner = new StringJoiner(", ", "[", "]");
         joiner.add("originalSql=[" + originalSql + "]");
-        joiner.add("storageTable=[" + storageTable + "]");
+        storageTable.ifPresent(value -> joiner.add("storageTable=" + value));
         catalog.ifPresent(value -> joiner.add("catalog=" + value));
         schema.ifPresent(value -> joiner.add("schema=" + value));
         joiner.add("columns=" + columns);
         comment.ifPresent(value -> joiner.add("comment=" + value));
-        owner.ifPresent(value -> joiner.add("owner=" + value));
+        joiner.add("owner=" + owner);
         joiner.add("properties=" + properties);
         return getClass().getSimpleName() + joiner.toString();
     }

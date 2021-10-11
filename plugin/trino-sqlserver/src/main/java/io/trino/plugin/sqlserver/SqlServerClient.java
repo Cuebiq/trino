@@ -32,6 +32,7 @@ import io.trino.plugin.jdbc.JdbcSortItem;
 import io.trino.plugin.jdbc.JdbcSplit;
 import io.trino.plugin.jdbc.JdbcTableHandle;
 import io.trino.plugin.jdbc.JdbcTypeHandle;
+import io.trino.plugin.jdbc.LongReadFunction;
 import io.trino.plugin.jdbc.LongWriteFunction;
 import io.trino.plugin.jdbc.RemoteTableName;
 import io.trino.plugin.jdbc.SliceWriteFunction;
@@ -68,7 +69,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -86,8 +89,6 @@ import static io.trino.plugin.jdbc.StandardColumnMappings.bigintWriteFunction;
 import static io.trino.plugin.jdbc.StandardColumnMappings.booleanColumnMapping;
 import static io.trino.plugin.jdbc.StandardColumnMappings.booleanWriteFunction;
 import static io.trino.plugin.jdbc.StandardColumnMappings.charWriteFunction;
-import static io.trino.plugin.jdbc.StandardColumnMappings.dateColumnMapping;
-import static io.trino.plugin.jdbc.StandardColumnMappings.dateWriteFunction;
 import static io.trino.plugin.jdbc.StandardColumnMappings.decimalColumnMapping;
 import static io.trino.plugin.jdbc.StandardColumnMappings.defaultCharColumnMapping;
 import static io.trino.plugin.jdbc.StandardColumnMappings.defaultVarcharColumnMapping;
@@ -130,6 +131,7 @@ import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.math.RoundingMode.UNNECESSARY;
 import static java.time.Duration.ofMinutes;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
 public class SqlServerClient
@@ -138,8 +140,11 @@ public class SqlServerClient
     // SqlServer supports 2100 parameters in prepared statement, let's create a space for about 4 big IN predicates
     public static final int SQL_SERVER_MAX_LIST_EXPRESSIONS = 500;
 
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
     private static final Joiner DOT_JOINER = Joiner.on(".");
 
+    private final boolean snapshotIsolationDisabled;
     private final Cache<SnapshotIsolationEnabledCacheKey, Boolean> snapshotIsolationEnabled = CacheBuilder.newBuilder()
             .maximumSize(1)
             .expireAfterWrite(ofMinutes(5))
@@ -150,9 +155,12 @@ public class SqlServerClient
     private static final int MAX_SUPPORTED_TEMPORAL_PRECISION = 7;
 
     @Inject
-    public SqlServerClient(BaseJdbcConfig config, ConnectionFactory connectionFactory)
+    public SqlServerClient(BaseJdbcConfig config, SqlServerConfig sqlServerConfig, ConnectionFactory connectionFactory)
     {
         super(config, "\"", connectionFactory);
+
+        requireNonNull(sqlServerConfig, "sqlServerConfig is null");
+        snapshotIsolationDisabled = sqlServerConfig.isSnapshotIsolationDisabled();
 
         JdbcTypeHandle bigintTypeHandle = new JdbcTypeHandle(Types.BIGINT, Optional.of("bigint"), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         this.aggregateFunctionRewriter = new AggregateFunctionRewriter(
@@ -274,7 +282,10 @@ public class SqlServerClient
                 return Optional.of(varbinaryColumnMapping());
 
             case Types.DATE:
-                return Optional.of(dateColumnMapping());
+                return Optional.of(ColumnMapping.longMapping(
+                        DATE,
+                        sqlServerDateReadFunction(),
+                        sqlServerDateWriteFunction()));
 
             case Types.TIME:
                 TimeType timeType = createTimeType(typeHandle.getRequiredDecimalDigits());
@@ -345,7 +356,7 @@ public class SqlServerClient
         }
 
         if (type == DATE) {
-            return WriteMapping.longMapping("date", dateWriteFunction());
+            return WriteMapping.longMapping("date", sqlServerDateWriteFunction());
         }
 
         if (type instanceof TimeType) {
@@ -392,6 +403,16 @@ public class SqlServerClient
                 statement.setString(index, localTime.toString());
             }
         };
+    }
+
+    private static LongWriteFunction sqlServerDateWriteFunction()
+    {
+        return (statement, index, day) -> statement.setString(index, DATE_FORMATTER.format(LocalDate.ofEpochDay(day)));
+    }
+
+    private static LongReadFunction sqlServerDateReadFunction()
+    {
+        return (resultSet, index) -> LocalDate.parse(resultSet.getString(index), DATE_FORMATTER).toEpochDay();
     }
 
     @Override
@@ -538,6 +559,9 @@ public class SqlServerClient
     private Connection configureConnectionTransactionIsolation(Connection connection)
             throws SQLException
     {
+        if (snapshotIsolationDisabled) {
+            return connection;
+        }
         try {
             if (hasSnapshotIsolationEnabled(connection)) {
                 // SQL Server's READ COMMITTED + SNAPSHOT ISOLATION is equivalent to ordinary READ COMMITTED in e.g. Oracle, PostgreSQL.
@@ -558,7 +582,7 @@ public class SqlServerClient
         try {
             return snapshotIsolationEnabled.get(SnapshotIsolationEnabledCacheKey.INSTANCE, () -> {
                 Handle handle = Jdbi.open(connection);
-                return handle.createQuery("SELECT is_read_committed_snapshot_on FROM sys.databases WHERE name = :name")
+                return handle.createQuery("SELECT snapshot_isolation_state FROM sys.databases WHERE name = :name")
                         .bind("name", connection.getCatalog())
                         .mapTo(Boolean.class)
                         .findOne()
@@ -589,7 +613,7 @@ public class SqlServerClient
                 DISABLE_PUSHDOWN);
     }
 
-    private static SliceWriteFunction varbinaryWriteFunction()
+    public static SliceWriteFunction varbinaryWriteFunction()
     {
         return new SliceWriteFunction()
         {
