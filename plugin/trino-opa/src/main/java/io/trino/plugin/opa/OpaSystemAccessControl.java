@@ -15,20 +15,22 @@ package io.trino.plugin.opa;
 
 import io.trino.spi.security.SystemAccessControl;
 
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 
 public class OpaSystemAccessControl
         extends Proxy
         implements SystemAccessControl
 {
-    protected OpaSystemAccessControl()
+    protected OpaSystemAccessControl(OpaInvocationHandler h)
     {
-        super(new OpaInvocationHandler());
+        super(h);
     }
 
-    public static SystemAccessControl getInstance()
+    public static SystemAccessControl getInstance(OpaConfig config)
     {
-        return (SystemAccessControl) OpaSystemAccessControl.newProxyInstance(OpaSystemAccessControl.class.getClassLoader(), new Class[] {
-                SystemAccessControl.class}, new OpaInvocationHandler());
+        return (SystemAccessControl) OpaSystemAccessControl.newProxyInstance(
+                    OpaSystemAccessControl.class.getClassLoader(), new Class[] {SystemAccessControl.class}, new OpaInvocationHandler(config)
+        );
     }
 }

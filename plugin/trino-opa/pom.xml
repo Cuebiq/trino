@@ -6,11 +6,12 @@
     <parent>
         <artifactId>trino-root</artifactId>
         <groupId>io.trino</groupId>
-        <version>355</version>
+        <version>356</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <artifactId>trino-opa</artifactId>
     <packaging>trino-plugin</packaging>
+
 
     <properties>
         <air.main.basedir>${project.parent.basedir}</air.main.basedir>

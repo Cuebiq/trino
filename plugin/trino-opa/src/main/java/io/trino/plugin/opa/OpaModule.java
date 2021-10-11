@@ -15,9 +15,10 @@ package io.trino.plugin.opa;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import io.trino.spi.security.SystemAccessControl;
-
-import java.lang.reflect.Proxy;
+import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class OpaModule
         implements Module
@@ -25,8 +26,14 @@ public class OpaModule
     @Override
     public void configure(Binder binder)
     {
-        binder.bind(SystemAccessControl.class).toInstance((SystemAccessControl) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {
-                SystemAccessControl.class}, new OpaInvocationHandler()));
-//        .toInstance(OpaSystemAccessControl.getInstance());
+        configBinder(binder).bindConfig(OpaConfig.class);
+//        binder.bind(SystemAccessControl.class).toProvider(() -> OpaSystemAccessControl.getInstance());
+    }
+
+    @Provides
+    @Singleton
+    public SystemAccessControl getOpaSystemAccessControl(OpaConfig config)
+    {
+        return OpaSystemAccessControl.getInstance(config);
     }
 }

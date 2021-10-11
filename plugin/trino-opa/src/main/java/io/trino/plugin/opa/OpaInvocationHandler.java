@@ -23,15 +23,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
 import io.trino.spi.security.SystemAccessControl;
+import io.trino.spi.security.ViewExpression;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.sql.Array;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class OpaInvocationHandler
         implements InvocationHandler
@@ -41,17 +49,16 @@ public class OpaInvocationHandler
     private static SystemAccessControl allowAllSystemAccessControl = new AllowAllSystemAccessControl();
 
     private ObjectMapper mapper;
-    private OpaClient client = OpaClient.builder()
-            .opaConfiguration("http://localhost:8181")
-            .build();
+    private final OpaClient client;
 
-    public OpaInvocationHandler()
+    public OpaInvocationHandler(OpaConfig config)
     {
         this.mapper = ObjectMapperFactory.getInstance().create();
         mapper.registerModule(new Jdk8Module());
 
-//        OpaDocument doc = new OpaDocument("/test","{json}");
-//        client.createOrOverwriteDocument(doc);
+        client = OpaClient.builder()
+                .opaConfiguration(config.getUrl())
+                .build();
     }
 
     @Override
@@ -77,14 +84,48 @@ public class OpaInvocationHandler
             else {
                 try {
                     return method.invoke(denyAllSystemAccessControl, args);
-                }catch (InvocationTargetException ite)
-                {
+                }
+                catch (InvocationTargetException ite) {
                     throw ite.getCause();
                 }
-
             }
         }
-        return executeDefaultMethod(method, args);
+
+        Type genericReturnType = method.getGenericReturnType();
+        if (genericReturnType instanceof ParameterizedType) {
+            ParameterizedType parameterizedType = (ParameterizedType) genericReturnType;
+            Class rawType = Class.forName(parameterizedType.getRawType().getTypeName());
+            Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
+            if (Set.class.isAssignableFrom(rawType)
+                    && actualTypeArguments.length == 1
+                    && String.class.isAssignableFrom((Class) actualTypeArguments[0])) {
+                if (result instanceof Collection) {
+                    Object next = ((Collection) result).iterator().next();
+                    if (next instanceof Collection) {
+                        return Set.of(((Collection<?>) next).toArray());
+                    }
+                }
+            }
+
+            if (Optional.class.isAssignableFrom(rawType) && actualTypeArguments.length == 1
+                    && ViewExpression.class.isAssignableFrom((Class) actualTypeArguments[0])) {
+                Optional opResult = (Optional) result;
+                if (opResult.isPresent()) {
+                    Object o = opResult.get();
+                    if (o instanceof List) {
+                        Map<String, String> opaResult = (Map) ((List) o).get(0);
+                        return Optional.of(
+                                new ViewExpression(opaResult.get("identity"),
+                                        Optional.of(opaResult.get("catalog")),
+                                        Optional.of(opaResult.get("schema")),
+                                        opaResult.get("expression")));
+                    }
+                }
+            }
+        }
+        return result;
+
+//        return executeDefaultMethod(method, args);
 
     }
 
@@ -102,7 +143,7 @@ public class OpaInvocationHandler
 
     private boolean isPolicyConfigured(String policy)
     {
-        List<String> configured = Arrays.asList("checkCanSetUser");
+        List<String> configured = Arrays.asList("checkCanSetUser", "filterCatalogs", "getRowFilter");
         return configured.contains(policy);
     }
 
@@ -110,9 +151,8 @@ public class OpaInvocationHandler
     {
         String methodName = method.getName();
         //TODO: insert custom mapping
-         return methodName;
+        return methodName;
     }
-
 
     private Map<String, Object> createInputParamatersMap(Parameter[] parameters, Object[] args)
             throws JsonProcessingException

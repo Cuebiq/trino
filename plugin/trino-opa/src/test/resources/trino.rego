@@ -11,10 +11,24 @@ checkCanSetUser {
 default checkCanImpersonateUser = false
 
 checkCanImpersonateUser = true {
-    input.context.identity.user == "admin"
+    input.principal.name == "admin"
 }
 checkCanImpersonateUser {
-    input.context.identity.user == input.username
+    input.principal.name == input.userName
 }
 
 
+filterCatalogs[catalogs]{
+    catalogs:={"tpch"}
+}
+
+default getColumnMask = []
+
+getRowFilter[viewExpression]{
+    viewExpression={
+        "identity": input.context.identity.user,
+        "catalog":"tpch",
+        "schema": "sf1",
+        "expression": "nationkey=21"
+    }
+}
