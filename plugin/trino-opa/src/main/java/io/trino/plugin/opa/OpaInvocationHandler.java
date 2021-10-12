@@ -14,12 +14,11 @@
 package io.trino.plugin.opa;
 
 import com.bisnode.opa.client.OpaClient;
-import com.bisnode.opa.client.data.OpaDocument;
-import com.bisnode.opa.client.query.OpaQueryApi;
 import com.bisnode.opa.client.query.QueryForDocumentRequest;
 import com.bisnode.opa.client.rest.ObjectMapperFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
 import io.trino.spi.security.SystemAccessControl;
@@ -29,17 +28,11 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.sql.Array;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 
 public class OpaInvocationHandler
         implements InvocationHandler
@@ -55,6 +48,11 @@ public class OpaInvocationHandler
     {
         this.mapper = ObjectMapperFactory.getInstance().create();
         mapper.registerModule(new Jdk8Module());
+
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(ViewExpression.class, new ViewExpressionDeserializer(ViewExpression.class));
+        mapper.registerModule(module);
+
 
         client = OpaClient.builder()
                 .opaConfiguration(config.getUrl())
@@ -72,11 +70,11 @@ public class OpaInvocationHandler
         Map<String, Object> input = createInputParamatersMap(method.getParameters(), args);
 
         Class<?> returnType = method.getReturnType();
+        Type genericReturnType = method.getGenericReturnType();
         if (returnType.equals(Void.TYPE)) {
-            returnType = Boolean.class;
+            genericReturnType = Boolean.class;
         }
-
-        Object result = client.queryForDocument(new QueryForDocumentRequest(input, rulepath(policy)), returnType);
+        Object result = client.queryForDocument(new QueryForDocumentRequest(input, rulepath(policy)), genericReturnType);
         if (method.getReturnType().equals(Void.TYPE) && result instanceof Boolean) {
             if ((Boolean) result) {
                 return null;
@@ -91,41 +89,7 @@ public class OpaInvocationHandler
             }
         }
 
-        Type genericReturnType = method.getGenericReturnType();
-        if (genericReturnType instanceof ParameterizedType) {
-            ParameterizedType parameterizedType = (ParameterizedType) genericReturnType;
-            Class rawType = Class.forName(parameterizedType.getRawType().getTypeName());
-            Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-            if (Set.class.isAssignableFrom(rawType)
-                    && actualTypeArguments.length == 1
-                    && String.class.isAssignableFrom((Class) actualTypeArguments[0])) {
-                if (result instanceof Collection) {
-                    Object next = ((Collection) result).iterator().next();
-                    if (next instanceof Collection) {
-                        return Set.of(((Collection<?>) next).toArray());
-                    }
-                }
-            }
-
-            if (Optional.class.isAssignableFrom(rawType) && actualTypeArguments.length == 1
-                    && ViewExpression.class.isAssignableFrom((Class) actualTypeArguments[0])) {
-                Optional opResult = (Optional) result;
-                if (opResult.isPresent()) {
-                    Object o = opResult.get();
-                    if (o instanceof List) {
-                        Map<String, String> opaResult = (Map) ((List) o).get(0);
-                        return Optional.of(
-                                new ViewExpression(opaResult.get("identity"),
-                                        Optional.of(opaResult.get("catalog")),
-                                        Optional.of(opaResult.get("schema")),
-                                        opaResult.get("expression")));
-                    }
-                }
-            }
-        }
         return result;
-
-//        return executeDefaultMethod(method, args);
 
     }
 

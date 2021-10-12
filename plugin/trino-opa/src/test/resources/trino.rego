@@ -19,18 +19,20 @@ checkCanImpersonateUser {
 
 
 filterCatalogs[catalogs]{
-    catalogs:={"tpch"}
+   catalogs = "tpch"
+   catalogs = "jmx"
 }
 
 default getColumnMask = []
 
-getRowFilter[viewExpression]{
-    viewExpression={
-        "identity": input.context.identity.user,
-        "catalog":"tpch",
-        "schema": "sf1",
-        "expression": concat("",["nationkey in(",filterNations[_],")"])
-    }
+
+getRowFilter =  {
+	 "identity": input.context.identity.user,
+     "catalog": input.tableName.catalog,
+     "schema": input.tableName.schemaTable.schema,
+     "expression": concat("",["nationkey in(",filterNations[_],")"])
+}{
+	true
 }
 
 roles = ["20","21","22"]# input.context.identity.user_roles
