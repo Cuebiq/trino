@@ -42,12 +42,13 @@ getColumnMask =  {
 	 "identity": input.context.identity.user,
      "catalog": input.tableName.catalog,
      "schema": input.tableName.schemaTable.schema,
-     "expression": "cast(concat(substr(phone,1,4),'XXXXXXXXX') as varchar(15))"
+     "expression": data.rules[i].expression
 }{
-	input.tableName.catalog = "tpch"
-	input.tableName.schemaTable.schema = "sf1"
-	input.tableName.schemaTable.table = "customer"
-	input.columnName = "phone"
+    some i
+	input.tableName.catalog = data.rules[i].catalog
+	input.tableName.schemaTable.schema = data.rules[i].schema
+	input.tableName.schemaTable.table = data.rules[i].table
+	input.columnName = data.rules[i].column
 }
 
 getRowFilter =  {
