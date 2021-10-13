@@ -37,8 +37,18 @@ allowCatalog{
     filterCatalogs[_] = input.catalogName
 }
 
-default getColumnMask = []
 
+getColumnMask =  {
+	 "identity": input.context.identity.user,
+     "catalog": input.tableName.catalog,
+     "schema": input.tableName.schemaTable.schema,
+     "expression": "cast(concat(substr(phone,1,4),'XXXXXXXXX') as varchar(15))"
+}{
+	input.tableName.catalog = "tpch"
+	input.tableName.schemaTable.schema = "sf1"
+	input.tableName.schemaTable.table = "customer"
+	input.columnName = "phone"
+}
 
 getRowFilter =  {
 	 "identity": input.context.identity.user,

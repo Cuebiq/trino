@@ -119,7 +119,14 @@ public class OpaInvocationHandler
 
     private boolean isPolicyConfigured(String policy)
     {
-        List<String> configured = Arrays.asList("checkCanSetUser", "filterCatalogs", "getRowFilter","checkCanAccessCatalog","checkCanShowTables");
+        List<String> configured = Arrays.asList(
+                "checkCanSetUser",
+                "filterCatalogs",
+                "getRowFilter",
+                "checkCanAccessCatalog",
+                "checkCanShowTables",
+                "getColumnMask"
+        );
         return configured.contains(policy);
     }
 
