@@ -19,8 +19,16 @@ checkCanImpersonateUser {
 
 
 filterCatalogs[catalogs]{
-   catalogs = "tpch"
-   catalogs = "jmx"
+   catalogs = ["tpch","jmx"][_]
+}
+
+checkCanAccessCatalog[exception]{
+    not allowCatalog
+    exception = concat(" ",["cannot access to catalog",input.catalogName])
+}
+
+allowCatalog{
+    filterCatalogs[_] = input.catalogName
 }
 
 default getColumnMask = []
@@ -32,7 +40,9 @@ getRowFilter =  {
      "schema": input.tableName.schemaTable.schema,
      "expression": concat("",["nationkey in(",filterNations[_],")"])
 }{
-	true
+	input.tableName.catalog = "tpch"
+	input.tableName.schemaTable.schema = "sf1"
+	input.tableName.schemaTable.table = "customer"
 }
 
 roles = ["20","21","22"]# input.context.identity.user_roles

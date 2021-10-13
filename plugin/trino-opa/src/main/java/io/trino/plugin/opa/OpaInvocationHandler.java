@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
+import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.SystemAccessControl;
 import io.trino.spi.security.ViewExpression;
 
@@ -72,21 +73,32 @@ public class OpaInvocationHandler
         Class<?> returnType = method.getReturnType();
         Type genericReturnType = method.getGenericReturnType();
         if (returnType.equals(Void.TYPE)) {
-            genericReturnType = Boolean.class;
+            genericReturnType = Object.class;
         }
         Object result = client.queryForDocument(new QueryForDocumentRequest(input, rulepath(policy)), genericReturnType);
-        if (method.getReturnType().equals(Void.TYPE) && result instanceof Boolean) {
-            if ((Boolean) result) {
+        if (method.getReturnType().equals(Void.TYPE) ) {
+            if(result instanceof Boolean)
+            {
+                if ((Boolean) result) {
+                    return null;
+                }
+                else {
+                    try {
+                        return method.invoke(denyAllSystemAccessControl, args);
+                    }
+                    catch (InvocationTargetException ite) {
+                        throw ite.getCause();
+                    }
+                }
+            }
+            else if(result instanceof List && !((List<?>) result).isEmpty())
+            {
+                throw new AccessDeniedException(result.toString());
+            }else
+            {
                 return null;
             }
-            else {
-                try {
-                    return method.invoke(denyAllSystemAccessControl, args);
-                }
-                catch (InvocationTargetException ite) {
-                    throw ite.getCause();
-                }
-            }
+
         }
 
         return result;
@@ -107,7 +119,7 @@ public class OpaInvocationHandler
 
     private boolean isPolicyConfigured(String policy)
     {
-        List<String> configured = Arrays.asList("checkCanSetUser", "filterCatalogs", "getRowFilter");
+        List<String> configured = Arrays.asList("checkCanSetUser", "filterCatalogs", "getRowFilter","checkCanAccessCatalog");
         return configured.contains(policy);
     }
 
