@@ -27,6 +27,12 @@ checkCanAccessCatalog[exception]{
     exception = concat(" ",["cannot access to catalog",input.catalogName])
 }
 
+default checkCanShowTables = false
+
+checkCanShowTables {
+    input.schema.catalogName = "tpch"
+}
+
 allowCatalog{
     filterCatalogs[_] = input.catalogName
 }
