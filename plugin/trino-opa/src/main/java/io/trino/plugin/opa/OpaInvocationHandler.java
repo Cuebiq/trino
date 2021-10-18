@@ -44,9 +44,12 @@ public class OpaInvocationHandler
 
     private ObjectMapper mapper;
     private final OpaClient client;
+    private OpaConfig opaConfig;
 
     public OpaInvocationHandler(OpaConfig config)
     {
+        this.opaConfig = config;
+
         this.mapper = ObjectMapperFactory.getInstance().create();
         mapper.registerModule(new Jdk8Module());
 
@@ -119,14 +122,17 @@ public class OpaInvocationHandler
 
     private boolean isPolicyConfigured(String policy)
     {
-        List<String> configured = Arrays.asList(
-                "checkCanSetUser",
-                "filterCatalogs",
-                "getRowFilter",
-                "checkCanAccessCatalog",
-                "checkCanShowTables",
-                "getColumnMask"
-        );
+        List<String> configured = opaConfig.getMethodsToCheck();
+        if(opaConfig.getMethodsToCheck().isEmpty()) {
+            configured = Arrays.asList(
+                    "checkCanSetUser",
+                    "filterCatalogs",
+                    "getRowFilter",
+                    "checkCanAccessCatalog",
+                    "checkCanShowTables",
+                    "getColumnMask"
+            );
+        }
         return configured.contains(policy);
     }
 

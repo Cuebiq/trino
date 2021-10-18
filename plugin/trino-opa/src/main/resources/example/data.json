@@ -5,14 +5,16 @@
             "schema": "sf1",
             "table": "customer",
             "column": "phone",
-            "expression": "cast(concat(substr(phone,1,4),'XXXXXXXXX') as varchar(15))"
+            "expression": "cast(concat(substr(phone,1,4),'XXXXXXXXX') as varchar(15))",
+            "role": "role1"
         },
         {
             "catalog": "tpch",
             "schema": "sf1",
             "table": "customer",
             "column": "acctbal",
-            "expression": "acctbal-1000000000"
+            "expression": "acctbal-1000000000",
+            "role": "role2"
         }
     ]
 }
