@@ -1,0 +1,26 @@
+{
+    "columns": [
+        "bobcolumn",
+        "private",
+        "restricted"
+    ],
+    "context": {
+        "identity": {
+            "user": "alice",
+            "groups": [
+                "staff"
+            ],
+            "principal": null,
+            "roles": {},
+            "extraCredentials": {}
+        },
+        "queryId": null
+    },
+    "table": {
+        "catalog": "some-catalog",
+        "schemaTable": {
+            "schema": "bobschema",
+            "table": "bobcolumns"
+        }
+    }
+}
