@@ -365,10 +365,10 @@ public class TestFileBasedSystemAccessControl
                 SELECT_TABLE_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanCreateViewWithSelectFromColumns()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("access-table",Arrays.asList("checkCanCreateViewWithSelectFromColumns"));
 
         assertAccessDenied(
                 () -> accessControl.checkCanCreateViewWithSelectFromColumns(
@@ -391,7 +391,7 @@ public class TestFileBasedSystemAccessControl
                         CHARLIE,
                         new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns_with_grant"),
                         ImmutableSet.of("bobcolumn", "private")),
-                SELECT_TABLE_ACCESS_DENIED_MESSAGE);
+                CREATE_VIEW_ACCESS_DENIED_MESSAGE);
     }
 
     @Test(enabled = false)

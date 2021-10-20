@@ -1,6 +1,21 @@
 package io.trino.spi.security.SystemAccessControl
 
 table_rules = data.table_rules.tables
+
+default checkCanCreateViewWithSelectFromColumns = false
+
+
+checkCanCreateViewWithSelectFromColumns{
+	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
+    input.table.schemaTable.schema == "information_schema"
+}
+
+checkCanCreateViewWithSelectFromColumns{
+    rule_to_apply := filter_table_rules[0]
+    all_columns_allowed(columns,rule_to_apply)
+    rule_to_apply.privileges[_] == ["GRANT_SELECT"][_]
+}
+
 default checkCanSelectFromColumns = false
 
 

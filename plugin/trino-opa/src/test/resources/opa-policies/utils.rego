@@ -11,7 +11,9 @@ equalsGroupOrMissing(obj, value)
 
 has_key(o,k){o[k]}
 
-getValuesOrAll(o,field) =  split(o[field],"|")
+getValuesOrAll(o,field) =  expr
 {
-	o[field]
+	groups = split(o[field],"|")
+	expr = [g| g = concat("",["^",groups[x],"$"])]
+
 } else = [".*"]
