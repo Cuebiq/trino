@@ -329,10 +329,10 @@ public class TestFileBasedSystemAccessControl
                 .toArray(new Object[0][0]);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanSelectFromColumns()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("access-table",Arrays.asList("checkCanSelectFromColumns"));
 
         accessControl.checkCanSelectFromColumns(ALICE, new CatalogSchemaTableName("some-catalog", "test", "test"), ImmutableSet.of());
         accessControl.checkCanSelectFromColumns(ALICE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"), ImmutableSet.of());
