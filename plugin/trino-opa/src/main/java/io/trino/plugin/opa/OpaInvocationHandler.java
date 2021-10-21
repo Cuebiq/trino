@@ -86,16 +86,20 @@ public class OpaInvocationHandler
                     return null;
                 }
                 else {
-                    try {
-                        return method.invoke(denyAllSystemAccessControl, args);
-                    }
-                    catch (InvocationTargetException ite) {
-                        throw ite.getCause();
-                    }
+                    return throwDefaultException(method, args);
                 }
+            }
+            else if("default-exception".equals(result))
+            {
+                return throwDefaultException(method, args);
+            }
+            else if(result instanceof String && !((String)result).isEmpty())
+            {
+                throw new AccessDeniedException((String)result);
             }
             else if(result instanceof List && !((List<?>) result).isEmpty())
             {
+                //TODO: format message
                 throw new AccessDeniedException(result.toString());
             }else
             {
@@ -106,6 +110,17 @@ public class OpaInvocationHandler
 
         return result;
 
+    }
+
+    private Object throwDefaultException(Method method, Object[] args)
+            throws Throwable
+    {
+        try {
+            return method.invoke(denyAllSystemAccessControl, args);
+        }
+        catch (InvocationTargetException ite) {
+            throw ite.getCause();
+        }
     }
 
     private String rulepath(String policy)

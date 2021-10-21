@@ -12,9 +12,13 @@ package io.trino.plugin.opa;/*
  * limitations under the License.
  */
 
+import com.bisnode.opa.client.OpaClient;
+import com.bisnode.opa.client.data.OpaDocument;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.io.CharStreams;
 import io.trino.plugin.base.security.FileBasedSystemAccessControl;
 import io.trino.spi.QueryId;
 import io.trino.spi.connector.CatalogSchemaName;
@@ -36,6 +40,8 @@ import javax.security.auth.kerberos.KerberosPrincipal;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -164,7 +170,7 @@ public class TestFileBasedSystemAccessControl
     @Test
     public void testSchemaRulesForCheckCanCreateSchema()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("access-schema", Arrays.asList("checkCanCreateSchema"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("schema_rules","file-based-system-access-schema.json", Arrays.asList("checkCanCreateSchema"));
 
         accessControl.checkCanCreateSchema(ADMIN, new CatalogSchemaName("some-catalog", "bob"));
         accessControl.checkCanCreateSchema(ADMIN, new CatalogSchemaName("some-catalog", "staff"));
@@ -185,7 +191,7 @@ public class TestFileBasedSystemAccessControl
     @Test
     public void testSchemaRulesForCheckCanDropSchema()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("access-schema", Arrays.asList("checkCanDropSchema"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("schema_rules","file-based-system-access-schema.json", Arrays.asList("checkCanDropSchema"));
 
         accessControl.checkCanDropSchema(ADMIN, new CatalogSchemaName("some-catalog", "bob"));
         accessControl.checkCanDropSchema(ADMIN, new CatalogSchemaName("some-catalog", "staff"));
@@ -206,7 +212,7 @@ public class TestFileBasedSystemAccessControl
     @Test
     public void testSchemaRulesForCheckCanRenameSchema()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("access-schema", Arrays.asList("checkCanRenameSchema"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("schema_rules","file-based-system-access-schema.json", Arrays.asList("checkCanRenameSchema"));
 
         accessControl.checkCanRenameSchema(ADMIN, new CatalogSchemaName("some-catalog", "bob"), "new_schema");
         accessControl.checkCanRenameSchema(ADMIN, new CatalogSchemaName("some-catalog", "staff"), "new_schema");
@@ -228,7 +234,7 @@ public class TestFileBasedSystemAccessControl
     @Test
     public void testSchemaRulesForCheckCanSetSchemaAuthorization()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("access-schema", Arrays.asList("checkCanSetSchemaAuthorization"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("schema_rules","file-based-system-access-schema.json", Arrays.asList("checkCanSetSchemaAuthorization"));
 
         accessControl.checkCanSetSchemaAuthorization(ADMIN, new CatalogSchemaName("some-catalog", "test"), new TrinoPrincipal(PrincipalType.ROLE, "some_role"));
         accessControl.checkCanSetSchemaAuthorization(ADMIN, new CatalogSchemaName("some-catalog", "test"), new TrinoPrincipal(PrincipalType.USER, "some_user"));
@@ -241,7 +247,7 @@ public class TestFileBasedSystemAccessControl
     @Test
     public void testSchemaRulesForCheckCanShowCreateSchema()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("access-schema", Arrays.asList("checkCanShowCreateSchema"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("schema_rules","file-based-system-access-schema.json", Arrays.asList("checkCanShowCreateSchema"));
 
         accessControl.checkCanShowCreateSchema(ADMIN, new CatalogSchemaName("some-catalog", "bob"));
         accessControl.checkCanShowCreateSchema(ADMIN, new CatalogSchemaName("some-catalog", "staff"));
@@ -262,7 +268,7 @@ public class TestFileBasedSystemAccessControl
     @Test(dataProvider = "privilegeGrantOption")
     public void testGrantSchemaPrivilege(Privilege privilege, boolean grantOption)
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("access-schema", Arrays.asList("checkCanGrantSchemaPrivilege"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("schema_rules","file-based-system-access-schema.json", Arrays.asList("checkCanGrantSchemaPrivilege"));
         TrinoPrincipal grantee = new TrinoPrincipal(PrincipalType.USER, "alice");
 
         accessControl.checkCanGrantSchemaPrivilege(ADMIN, privilege, new CatalogSchemaName("some-catalog", "bob"), grantee, grantOption);
@@ -292,7 +298,7 @@ public class TestFileBasedSystemAccessControl
     @Test(dataProvider = "privilegeGrantOption")
     public void testRevokeSchemaPrivilege(Privilege privilege, boolean grantOption)
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("access-schema", Arrays.asList("checkCanRevokeSchemaPrivilege"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("schema_rules","file-based-system-access-schema.json", Arrays.asList("checkCanRevokeSchemaPrivilege"));
         TrinoPrincipal grantee = new TrinoPrincipal(PrincipalType.USER, "alice");
 
         accessControl.checkCanRevokeSchemaPrivilege(ADMIN, privilege, new CatalogSchemaName("some-catalog", "bob"), grantee, grantOption);
@@ -332,7 +338,7 @@ public class TestFileBasedSystemAccessControl
     @Test
     public void testTableRulesForCheckCanSelectFromColumns()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("access-table",Arrays.asList("checkCanSelectFromColumns"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("table_rules","file-based-system-access-table.json",Arrays.asList("checkCanSelectFromColumns"));
 
         accessControl.checkCanSelectFromColumns(ALICE, new CatalogSchemaTableName("some-catalog", "test", "test"), ImmutableSet.of());
         accessControl.checkCanSelectFromColumns(ALICE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns"), ImmutableSet.of());
@@ -368,7 +374,7 @@ public class TestFileBasedSystemAccessControl
     @Test
     public void testTableRulesForCheckCanCreateViewWithSelectFromColumns()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("access-table",Arrays.asList("checkCanCreateViewWithSelectFromColumns"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("table_rules","file-based-system-access-table.json",Arrays.asList("checkCanCreateViewWithSelectFromColumns"));
 
         assertAccessDenied(
                 () -> accessControl.checkCanCreateViewWithSelectFromColumns(
@@ -394,19 +400,18 @@ public class TestFileBasedSystemAccessControl
                 CREATE_VIEW_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanShowColumns()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
-
+        SystemAccessControl accessControl = newOpaSystemAccessControl("table_rules","file-based-system-access-table.json",Arrays.asList("checkCanShowColumns"));
         accessControl.checkCanShowColumns(ALICE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
         accessControl.checkCanShowColumns(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanShowColumnsWithNoAccess()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-no-access.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("table_rules","file-based-system-no-access.json",Arrays.asList("checkCanShowColumns","checkCanShowTables"));
         assertAccessDenied(() -> accessControl.checkCanShowColumns(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable")), SHOW_COLUMNS_ACCESS_DENIED_MESSAGE);
         assertAccessDenied(() -> accessControl.checkCanShowTables(BOB, new CatalogSchemaName("some-catalog", "bobschema")), SHOWN_TABLES_ACCESS_DENIED_MESSAGE);
     }
@@ -1223,16 +1228,28 @@ public class TestFileBasedSystemAccessControl
     {
         return null;
     }
-    private SystemAccessControl newOpaSystemAccessControl(String resourceName, List<String> methodsToTest)
+    private SystemAccessControl newOpaSystemAccessControl(String resourceName,String filename, List<String> methodsToTest)
     {
+        try {
 //        try {
 //            Process process = Runtime.getRuntime().exec(new String[] {"opa", "run", "--server", "--log-level=debug", "--addr=0.0.0.0:8181",
 //                    "./rego_rules"});
 
 //            Process process = Runtime.getRuntime().exec("opa run --server --log-level=debug --addr=0.0.0.0:8181 /Users/rtotaro/IdeaProjects/trino/plugin/trino-opa/src/test/resources/access-schema");
 
+            String opaUrl = "http://localhost:8181";
+            OpaClient client = OpaClient.builder()
+                    .opaConfiguration(opaUrl)
+                    .build();
+
+            InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("security_test_config/" + filename);
+            String opaData = CharStreams.toString(new InputStreamReader(resourceAsStream, Charsets.UTF_8));
+
+            OpaDocument document = new OpaDocument(resourceName, opaData);
+            client.createOrOverwriteDocument(document);
+
             OpaConfig opaConfig = new OpaConfig();
-            opaConfig.setUrl("http://localhost:8181");
+            opaConfig.setUrl(opaUrl);
             opaConfig.setMethodsToCheck(methodsToTest);
             SystemAccessControl systemAccessControl = OpaSystemAccessControl.getInstance(opaConfig);
             return systemAccessControl;
@@ -1240,6 +1257,11 @@ public class TestFileBasedSystemAccessControl
 //        catch (IOException e ) {
 //            throw new RuntimeException(e);
 //        }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private SystemAccessControl newOpaSystemAccessControl(ImmutableMap<String, String> config)

@@ -2,19 +2,47 @@ package io.trino.spi.security.SystemAccessControl
 
 table_rules = data.table_rules.tables
 
-default checkCanCreateViewWithSelectFromColumns = false
+
+default checkCanShowTables = false
+checkCanShowTables{
+    schema := input.table.schemaTable.schema
+    catalog := input.table.catalog
+    regex.match(getValuesOrAll(table_rules[i],"catalog")[_],catalog)
+    regex.match(getValuesOrAll(table_rules[i],"user")[_],input.context.identity.user)
+    matchGroups(getValuesOrAll(table_rules[i],"group"),input.context.identity.groups)
+    regex.match(getValuesOrAll(table_rules[i],"schema")[_],schema)
+}
+
+default checkCanShowColumns = false
+checkCanShowColumns{
+    rule_to_apply := filter_table_rules[0]
+    all_columns_allowed(columns,rule_to_apply)
+    count(rule_to_apply.privileges) > 0
+}
 
 
-checkCanCreateViewWithSelectFromColumns{
+default checkCanCreateViewWithSelectFromColumns = "default-exception"
+
+checkCanCreateViewWithSelectFromColumns = "" {
 	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
     input.table.schemaTable.schema == "information_schema"
 }
 
-checkCanCreateViewWithSelectFromColumns{
+checkCanCreateViewWithSelectFromColumns = concat(" ",["View owner '",input.context.identity.user,"' cannot create view that selects from",input.table.schemaTable.table])
+{
     rule_to_apply := filter_table_rules[0]
     all_columns_allowed(columns,rule_to_apply)
-    rule_to_apply.privileges[_] == ["GRANT_SELECT"][_]
+    not has_privileges(rule_to_apply.privileges,["GRANT_SELECT"])
 }
+
+
+
+checkCanCreateViewWithSelectFromColumns = ""{
+    rule_to_apply := filter_table_rules[0]
+    all_columns_allowed(columns,rule_to_apply)
+    has_privileges(rule_to_apply.privileges,["GRANT_SELECT"])
+}
+
 
 default checkCanSelectFromColumns = false
 
@@ -27,8 +55,7 @@ checkCanSelectFromColumns{
 checkCanSelectFromColumns{
     rule_to_apply := filter_table_rules[0]
     all_columns_allowed(columns,rule_to_apply)
-    rule_to_apply.privileges[_] == ["SELECT","GRANT_SELECT"][_]
-
+    has_privileges(rule_to_apply.privileges,["SELECT","GRANT_SELECT"])
 }
 
 filter_table_rules = rules{
@@ -43,6 +70,7 @@ filter_table_rules = rules{
    	 	regex.match(getValuesOrAll(r,"table")[_],table)
     ]
 }
+
 default matchGroups(group_rules,user_groups) = false
 matchGroups(group_rules,user_groups){
 	regex.match(group_rules[_],user_groups[j])
@@ -83,8 +111,14 @@ column_allowed(column, column_rules)
 	count({x|column_rules[x];regex.match(getValuesOrAll(column_rules[x],"name")[_],column)}) == 0
 }
 
-
 allow(column_rule) = allow_value
 {
     allow_value := column_rule.allow
 }else = true
+
+default has_privileges(privileges, requested) = false
+has_privileges(privileges, requested)
+{
+	privileges[_] == requested[_]
+}
+
