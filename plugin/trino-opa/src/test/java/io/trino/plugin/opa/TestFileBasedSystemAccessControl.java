@@ -416,10 +416,10 @@ public class TestFileBasedSystemAccessControl
         assertAccessDenied(() -> accessControl.checkCanShowTables(BOB, new CatalogSchemaName("some-catalog", "bobschema")), SHOWN_TABLES_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForFilterColumns()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("table_rules","file-based-system-access-table.json",Arrays.asList("filterColumns"));
 
         assertEquals(
                 accessControl.filterColumns(

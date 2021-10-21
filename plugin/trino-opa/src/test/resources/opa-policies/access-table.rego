@@ -2,6 +2,25 @@ package io.trino.spi.security.SystemAccessControl
 
 table_rules = data.table_rules.tables
 
+filterColumns[columns]{
+	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
+    input.table.schemaTable.schema == "information_schema"
+    columns = input.columns[i]
+}
+
+filterColumns[columns]{
+	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
+    count({x|x=filter_table_rules[0].privileges[i]} - {"SELECT","GRANT_SELECT"}) > 0
+    columns = input.columns[i]
+}
+
+
+filterColumns[cc]{
+	regex.match(getValuesOrAll(table_rules[_],"catalog")[_],input.table.catalog)
+    column_allowed(input.columns[i],column_rules(filter_table_rules[0]))
+    cc = input.columns[i]
+}
+
 
 default checkCanShowTables = false
 checkCanShowTables{

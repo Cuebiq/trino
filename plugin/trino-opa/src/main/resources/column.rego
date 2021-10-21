@@ -4,8 +4,8 @@ config = data.example
 
 kc = data.example.kc
 
-getColumnMask =  {
-	 "identity": input.context.identity.user,
+getColumnMask = {
+	 "identity" : input.context.identity.user,
      "catalog": input.tableName.catalog,
      "schema": input.tableName.schemaTable.schema,
      "expression": config.rules[i].expression
