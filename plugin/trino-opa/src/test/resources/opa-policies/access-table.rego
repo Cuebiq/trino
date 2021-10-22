@@ -1,17 +1,24 @@
 package io.trino.spi.security.SystemAccessControl
 
-table_rules = data.table_rules.tables
+table_rules = data.rules.tables
 
-filterColumns[columns]{
-	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
-    input.table.schemaTable.schema == "information_schema"
-    columns = input.columns[i]
+
+filterTables[tt]{
+    table_allowed(input.catalogName,input.tableNames[i].schema,input.tableNames[i].table)
+    tt = input.tableNames[i]
 }
 
-filterColumns[columns]{
+
+filterColumns[cc]{
+	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
+    input.table.schemaTable.schema == "information_schema"
+    cc = input.columns[i]
+}
+
+filterColumns[cc]{
 	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
     count({x|x=filter_table_rules[0].privileges[i]} - {"SELECT","GRANT_SELECT"}) > 0
-    columns = input.columns[i]
+    cc = input.columns[i]
 }
 
 
@@ -31,6 +38,25 @@ checkCanShowTables{
     matchGroups(getValuesOrAll(table_rules[i],"group"),input.context.identity.groups)
     regex.match(getValuesOrAll(table_rules[i],"schema")[_],schema)
 }
+
+table_allowed(catalog,schema,table){
+    isSchemaOwner(catalog,schema)
+}
+
+default table_allowed(catalog,schema,table) = false
+table_allowed(catalog,schema,table){
+    can_access_catalog(catalog,"READ_ONLY")
+    rule_to_apply := filter_table_rules[0]
+   	regex.match(getValuesOrAll(rule_to_apply,"catalog")[_],catalog)
+    regex.match(getValuesOrAll(rule_to_apply,"user")[_],input.context.identity.user)
+    matchGroups(getValuesOrAll(rule_to_apply,"group"),input.context.identity.groups)
+    regex.match(getValuesOrAll(rule_to_apply,"schema")[_],schema)
+    regex.match(getValuesOrAll(rule_to_apply,"table")[_],table)
+    count(rule_to_apply.privileges) > 0
+}
+
+
+
 
 default checkCanShowColumns = false
 checkCanShowColumns{
@@ -81,7 +107,7 @@ filter_table_rules = rules{
 	schema := input.table.schemaTable.schema
     table := input.table.schemaTable.table
     catalog := input.table.catalog
-    rules=[ r| r = table_rules[i];
+    rules= [ r| r = table_rules[i];
     	regex.match(getValuesOrAll(r,"catalog")[_],catalog)
 	    regex.match(getValuesOrAll(r,"user")[_],input.context.identity.user)
         matchGroups(getValuesOrAll(r,"group"),input.context.identity.groups)

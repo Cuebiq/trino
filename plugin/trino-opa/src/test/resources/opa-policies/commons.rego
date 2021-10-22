@@ -13,7 +13,7 @@ has_key(o,k){o[k]}
 
 getValuesOrAll(o,field) =  expr
 {
-	groups = split(o[field],"|")
-	expr = [g| g = concat("",["^",groups[x],"$"])]
+	values = split(o[field],"|")
+	expr = [g| g = concat("",["^",values[x],"$"])]
 
 } else = [".*"]
