@@ -7,11 +7,7 @@ filterTables[tt]{
 }
 
 
-filterColumns[cc]{
-	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
-    input.table.schemaTable.schema == "information_schema"
-    cc = input.columns[i]
-}
+
 
 
 default checkCanShowTables = false

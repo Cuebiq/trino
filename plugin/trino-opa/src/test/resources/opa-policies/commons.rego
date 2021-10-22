@@ -2,8 +2,14 @@ package io.trino.spi.security.SystemAccessControl
 
 
 schema_rules = data.rules.schemas
-catalog_rules = data.catalogs { data.catalog } else = [{"catalog": ".*"}]
+catalog_rules = data.rules.catalogs { data.rules.catalog } else = [{"catalog": ".*"}]
 table_rules = data.rules.tables
+
+schema_allowed(catalog,schema)
+{
+ 	getOrElse(filter_schema_rules(catalog,schema)[0],"owner",true) == true
+}
+else = true
 
 
 default matchGroups(group_rules,user_groups) = false
@@ -61,6 +67,7 @@ default table_allowed(catalog,schema,table) = false
 table_allowed(catalog,schema,table){
     can_access_catalog(catalog,"READ_ONLY")
     rule_to_apply := filter_table_rules(catalog,schema,table)[0]
+    schema_allowed(catalog,schema)
    	regex.match(getValuesOrAll(rule_to_apply,"catalog")[_],catalog)
     regex.match(getValuesOrAll(rule_to_apply,"user")[_],input.context.identity.user)
     matchGroups(getValuesOrAll(rule_to_apply,"group"),input.context.identity.groups)
@@ -104,7 +111,7 @@ column_rules(table_rule) = table_rule.columns
 default column_allowed(column, column_rules) = false
 column_allowed(column, column_rules){
 	regex.match(getValuesOrAll(column_rules[i],"name")[_],column)
-    allow(column_rules[i])
+	getOrElse(column_rules[i],"allow",true)
 }
 
 column_allowed(column, column_rules)
@@ -112,10 +119,10 @@ column_allowed(column, column_rules)
 	count({x|column_rules[x];regex.match(getValuesOrAll(column_rules[x],"name")[_],column)}) == 0
 }
 
-allow(column_rule) = allow_value
+getOrElse(obj,field,default_value) = result
 {
-    allow_value := column_rule.allow
-}else = true
+    result = obj[field]
+}else = default_value
 
 default has_privileges(privileges, requested) = false
 has_privileges(privileges, requested)

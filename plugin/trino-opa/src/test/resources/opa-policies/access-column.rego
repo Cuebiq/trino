@@ -10,6 +10,11 @@ filterColumns[cc]{
     cc = input.columns[i]
 }
 
+filterColumns[cc]{
+	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
+    input.table.schemaTable.schema == "information_schema"
+    cc = input.columns[i]
+}
 
 filterColumns[cc]{
     catalog := input.table.catalog
