@@ -1,6 +1,6 @@
 package io.trino.spi.security.SystemAccessControl
 
-catalog_rules = data.catalogs { data.catalog } else = [{"catalog": ".*"}]
+
 
 default can_access_catalog(catalog, access_mode) = false
 can_access_catalog(catalog, access_mode) = access
