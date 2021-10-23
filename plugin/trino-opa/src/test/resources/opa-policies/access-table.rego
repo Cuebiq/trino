@@ -1,5 +1,7 @@
 package io.trino.spi.security.SystemAccessControl
 
+table_rules = data.rules.tables
+
 
 filterTables[tt]{
     table_allowed(input.catalogName,input.tableNames[i].schema,input.tableNames[i].table)

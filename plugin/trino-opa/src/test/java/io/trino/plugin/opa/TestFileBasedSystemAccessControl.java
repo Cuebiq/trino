@@ -883,10 +883,10 @@ public class TestFileBasedSystemAccessControl
                 .hasMessageStartingWith("Access Denied: Cannot set authorization for schema secret.some_schema");
     }
 
-    @Test(enabled = false)
+    @Test
     public void testSessionPropertyRules()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-session-property.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-session-property.json",Arrays.asList("checkCanSetSystemSessionProperty,checkCanSetCatalogSessionProperty"));
 
         accessControl.checkCanSetSystemSessionProperty(ADMIN, "dangerous");
         accessControl.checkCanSetSystemSessionProperty(ADMIN, "any");
