@@ -52,6 +52,10 @@ checkCanSelectFromColumns = false {
     all_columns_allowed(object.get(input,"columns",[]), rule_to_apply)
     has_privileges(rule_to_apply.privileges,["SELECT","GRANT_SELECT"])
 }else = true {
+    catalog := input.table.catalog
+    schema := input.table.schemaTable.schema
+    table := input.table.schemaTable.table
+    count(filter_table_rules(catalog,schema,table))==0
     count(input.columns) == 0
 }
 
