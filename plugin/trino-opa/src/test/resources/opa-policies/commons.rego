@@ -1,8 +1,8 @@
 package io.trino.spi.security.SystemAccessControl
 
 
-schema_rules = data.rules.schemas
-catalog_rules = data.rules.catalogs { data.rules.catalog } else = [{"catalog": ".*"}]
+schema_rules = data.rules.schemas {data.rules.schemas} else = [{"owner": true}]
+catalog_rules = data.rules.catalogs { data.rules.catalogs } else = [{"catalog": ".*"}]
 table_rules = data.rules.tables
 
 default_column_rules = [] #[{ "name":".*","allow" : true}]

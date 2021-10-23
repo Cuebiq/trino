@@ -852,10 +852,10 @@ public class TestFileBasedSystemAccessControl
                 .hasMessage("Access Denied: Cannot write system information");
     }
 
-    @Test(enabled = false)
+    @Test
     public void testSchemaOperations()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("catalog.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("catalog.json",Arrays.asList("checkCanSetSchemaAuthorization"));
 
         TrinoPrincipal user = new TrinoPrincipal(PrincipalType.USER, "some_user");
         TrinoPrincipal role = new TrinoPrincipal(PrincipalType.ROLE, "some_user");
