@@ -795,10 +795,10 @@ public class TestFileBasedSystemAccessControl
                 .hasMessage("Access Denied: Cannot kill query");
     }
 
-    @Test(enabled = false)
+    @Test
     public void testSystemInformation()
     {
-        SystemAccessControl accessControlManager = newOpaSystemAccessControl("system-information.json");
+        SystemAccessControl accessControlManager = newOpaSystemAccessControl("system-information.json",Arrays.asList("checkCanReadSystemInformation","checkCanWriteSystemInformation"));
 
         accessControlManager.checkCanReadSystemInformation(new SystemSecurityContext(admin, Optional.empty()));
         accessControlManager.checkCanWriteSystemInformation(new SystemSecurityContext(admin, Optional.empty()));
@@ -814,15 +814,14 @@ public class TestFileBasedSystemAccessControl
         assertThatThrownBy(() -> accessControlManager.checkCanWriteSystemInformation(new SystemSecurityContext(bob, Optional.empty())))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessage("Access Denied: Cannot write system information");
-
         accessControlManager.checkCanReadSystemInformation(new SystemSecurityContext(nonAsciiUser, Optional.empty()));
         accessControlManager.checkCanWriteSystemInformation(new SystemSecurityContext(nonAsciiUser, Optional.empty()));
     }
 
-    @Test(enabled = false)
+    @Test
     public void testSystemInformationNotSet()
     {
-        SystemAccessControl accessControlManager = newOpaSystemAccessControl("catalog.json");
+        SystemAccessControl accessControlManager = newOpaSystemAccessControl("catalog.json",Arrays.asList("checkCanReadSystemInformation","checkCanWriteSystemInformation"));
 
         assertThatThrownBy(() -> accessControlManager.checkCanReadSystemInformation(new SystemSecurityContext(bob, Optional.empty())))
                 .isInstanceOf(AccessDeniedException.class)
@@ -832,11 +831,10 @@ public class TestFileBasedSystemAccessControl
                 .hasMessage("Access Denied: Cannot write system information");
     }
 
-    @Test(enabled = false)
+    @Test
     public void testSystemInformationDocsExample()
     {
-        String rulesFile = new File("../../docs/src/main/sphinx/security/system-information-access.json").getAbsolutePath();
-        SystemAccessControl accessControlManager = newOpaSystemAccessControl(ImmutableMap.of("security.config-file", rulesFile));
+        SystemAccessControl accessControlManager = newOpaSystemAccessControl("system-information-access.json",Arrays.asList("checkCanReadSystemInformation","checkCanWriteSystemInformation"));
 
         accessControlManager.checkCanReadSystemInformation(new SystemSecurityContext(admin, Optional.empty()));
         accessControlManager.checkCanWriteSystemInformation(new SystemSecurityContext(admin, Optional.empty()));
