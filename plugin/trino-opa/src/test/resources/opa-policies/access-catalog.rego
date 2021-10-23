@@ -5,9 +5,9 @@ package io.trino.spi.security.SystemAccessControl
 default can_access_catalog(catalog, access_mode) = false
 can_access_catalog(catalog, access_mode) = access
 {
-    regex.match(getValuesOrAll(catalog_rules[i],"catalog")[_],catalog)
-    regex.match(getValuesOrAll(catalog_rules[i],"user")[_],input.context.identity.user)
-    matchGroups(getValuesOrAll(catalog_rules[i],"group"),input.context.identity.groups)
+    match(catalog_rules[i],"catalog",catalog)
+    match(catalog_rules[i],"user",input.context.identity.user)
+    matchAnyInArray(catalog_rules[i],"group",input.context.identity.groups)
     access = match_access_mode(rule_access_mode(catalog_rules[i]),access_mode)
 }
 
@@ -39,6 +39,6 @@ decode_access_mode(am) = string_format{
     string_format = "NONE"
 }
 decode_access_mode(am) = string_format{
-	am == ["ALL","READ_ONLY","NONE"]
+	am == ["ALL","READ_ONLY","NONE"][_]
     string_format = am
 }

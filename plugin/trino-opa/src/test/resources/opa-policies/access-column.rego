@@ -5,24 +5,25 @@ filterColumns[cc]{
     catalog := input.table.catalog
     schema := input.table.schemaTable.schema
     table := input.table.schemaTable.table
-	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
+    match(table_rules[i],"catalog",input.table.catalog)
     count({x|x=filter_table_rules(catalog, schema, table)[0].privileges[i]} - {"SELECT","GRANT_SELECT"}) > 0
     cc = input.columns[i]
 }
 
 filterColumns[cc]{
-	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
+	match(table_rules[i],"catalog",input.table.catalog)
     input.table.schemaTable.schema == "information_schema"
     cc = input.columns[i]
 }
 
 filterColumns[cc]{
+    some i,j
     catalog := input.table.catalog
     schema := input.table.schemaTable.schema
     table := input.table.schemaTable.table
-	regex.match(getValuesOrAll(table_rules[_],"catalog")[_],input.table.catalog)
-    column_allowed(input.columns[i],column_rules(filter_table_rules(catalog, schema, table)[0]))
-    cc = input.columns[i]
+    match(table_rules[i],"catalog",input.table.catalog)
+    column_allowed(input.columns[j],object.get(filter_table_rules(catalog, schema, table)[0],"columns", default_column_rules))
+    cc = input.columns[j]
 }
 
 default checkCanShowColumns = false
@@ -38,24 +39,32 @@ checkCanShowColumns{
 
 default checkCanSelectFromColumns = false
 
-checkCanSelectFromColumns{
-	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
+checkCanSelectFromColumns = false {
+    not can_access_catalog(input.table.catalog,"READ_ONLY")
+} else = true {
+    match(table_rules[i],"catalog",input.table.catalog)
     input.table.schemaTable.schema == "information_schema"
-}
-
-checkCanSelectFromColumns{
+} else = true {
     catalog := input.table.catalog
     schema := input.table.schemaTable.schema
     table := input.table.schemaTable.table
     rule_to_apply := filter_table_rules(catalog,schema,table)[0]
-    all_columns_allowed(orEmptyArray(input.columns),rule_to_apply)
+    all_columns_allowed(object.get(input,"columns",[]), rule_to_apply)
     has_privileges(rule_to_apply.privileges,["SELECT","GRANT_SELECT"])
+}else = true {
+    count(input.columns) == 0
+}
+
+
+default column_rules(rule_to_apply) = []
+column_rules(rule_to_apply) = rules {
+    rules := object.get(rule_to_apply,"columns",default_column_rules)
 }
 
 default checkCanCreateViewWithSelectFromColumns = "default-exception"
 
 checkCanCreateViewWithSelectFromColumns = "" {
-	regex.match(getValuesOrAll(table_rules[i],"catalog")[_],input.table.catalog)
+    match(table_rules[i],"catalog",input.table.catalog)
     input.table.schemaTable.schema == "information_schema"
 }
 
@@ -65,7 +74,7 @@ checkCanCreateViewWithSelectFromColumns = concat(" ",["View owner '",input.conte
     schema := input.table.schemaTable.schema
     table := input.table.schemaTable.table
     rule_to_apply := filter_table_rules(catalog,schema,table)[0]
-    all_columns_allowed(orEmptyArray(input.columns),rule_to_apply)
+    all_columns_allowed(object.get(input,"columns",[]),rule_to_apply)
     not has_privileges(rule_to_apply.privileges,["GRANT_SELECT"])
 }
 
@@ -74,6 +83,6 @@ checkCanCreateViewWithSelectFromColumns = ""{
     schema := input.table.schemaTable.schema
     table := input.table.schemaTable.table
     rule_to_apply := filter_table_rules(catalog,schema,table)[0]
-    all_columns_allowed(orEmptyArray(input.columns),rule_to_apply)
+    all_columns_allowed(object.get(input,"columns",[]),rule_to_apply)
     has_privileges(rule_to_apply.privileges,["GRANT_SELECT"])
 }

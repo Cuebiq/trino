@@ -7,15 +7,12 @@ filterTables[tt]{
 }
 
 
-
-
-
 default checkCanShowTables = false
 checkCanShowTables{
     schema := input.table.schemaTable.schema
     catalog := input.table.catalog
-    regex.match(getValuesOrAll(table_rules[i],"catalog")[_],catalog)
-    regex.match(getValuesOrAll(table_rules[i],"user")[_],input.context.identity.user)
-    matchGroups(getValuesOrAll(table_rules[i],"group"),input.context.identity.groups)
-    regex.match(getValuesOrAll(table_rules[i],"schema")[_],schema)
+    match(table_rules[i],"catalog",catalog)
+    match(table_rules[i],"user",input.context.identity.user)
+    matchAnyInArray(table_rules[i],"group",input.context.identity.groups)
+    match(table_rules[i],"schema",schema)
 }
