@@ -724,10 +724,10 @@ public class TestFileBasedSystemAccessControl
         accessControlNoPatterns.checkCanSetUser(kerberosValidAlice.getPrincipal(), kerberosValidAlice.getUser());
     }
 
-    @Test(enabled = false)
+    @Test
     public void testQuery()
     {
-        SystemAccessControl accessControlManager = newOpaSystemAccessControl("query.json");
+        SystemAccessControl accessControlManager = newOpaSystemAccessControl("query.json",Arrays.asList("checkCanExecuteQuery","checkCanViewQueryOwnedBy","checkCanKillQueryOwnedBy","filterViewQueryOwnedBy"));
 
         accessControlManager.checkCanExecuteQuery(new SystemSecurityContext(admin, queryId));
         accessControlManager.checkCanViewQueryOwnedBy(new SystemSecurityContext(admin, queryId), "any");
@@ -739,11 +739,11 @@ public class TestFileBasedSystemAccessControl
         assertEquals(accessControlManager.filterViewQueryOwnedBy(new SystemSecurityContext(alice, queryId), ImmutableSet.of("a", "b")), ImmutableSet.of("a", "b"));
         assertThatThrownBy(() -> accessControlManager.checkCanKillQueryOwnedBy(new SystemSecurityContext(alice, queryId), "any"))
                 .isInstanceOf(AccessDeniedException.class)
-                .hasMessage("Access Denied: Cannot view query");
+                .hasMessage("Access Denied: Cannot kill query");
 
         assertThatThrownBy(() -> accessControlManager.checkCanExecuteQuery(new SystemSecurityContext(bob, queryId)))
                 .isInstanceOf(AccessDeniedException.class)
-                .hasMessage("Access Denied: Cannot view query");
+                .hasMessage("Access Denied: Cannot execute query");
         assertThatThrownBy(() -> accessControlManager.checkCanViewQueryOwnedBy(new SystemSecurityContext(bob, queryId), "any"))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessage("Access Denied: Cannot view query");
@@ -756,10 +756,10 @@ public class TestFileBasedSystemAccessControl
         accessControlManager.checkCanKillQueryOwnedBy(new SystemSecurityContext(nonAsciiUser, queryId), "any");
     }
 
-    @Test(enabled = false)
+    @Test
     public void testQueryNotSet()
     {
-        SystemAccessControl accessControlManager = newOpaSystemAccessControl("catalog.json");
+        SystemAccessControl accessControlManager = newOpaSystemAccessControl("catalog.json",Arrays.asList("checkCanExecuteQuery","checkCanViewQueryOwnedBy","checkCanKillQueryOwnedBy","filterViewQueryOwnedBy"));
 
         accessControlManager.checkCanExecuteQuery(new SystemSecurityContext(bob, queryId));
         accessControlManager.checkCanViewQueryOwnedBy(new SystemSecurityContext(bob, queryId), "any");
@@ -767,11 +767,11 @@ public class TestFileBasedSystemAccessControl
         accessControlManager.checkCanKillQueryOwnedBy(new SystemSecurityContext(bob, queryId), "any");
     }
 
-    @Test(enabled = false)
+    @Test
     public void testQueryDocsExample()
     {
-        String rulesFile = new File("../../docs/src/main/sphinx/security/query-access.json").getAbsolutePath();
-        SystemAccessControl accessControlManager = newOpaSystemAccessControl(ImmutableMap.of("security.config-file", rulesFile));
+        SystemAccessControl accessControlManager = newOpaSystemAccessControl("query-access.json",Arrays.asList("checkCanExecuteQuery","checkCanViewQueryOwnedBy","checkCanKillQueryOwnedBy","filterViewQueryOwnedBy"));
+
 
         accessControlManager.checkCanExecuteQuery(new SystemSecurityContext(admin, queryId));
         accessControlManager.checkCanViewQueryOwnedBy(new SystemSecurityContext(admin, queryId), "any");
@@ -792,7 +792,7 @@ public class TestFileBasedSystemAccessControl
         assertEquals(accessControlManager.filterViewQueryOwnedBy(new SystemSecurityContext(bob, queryId), ImmutableSet.of("a", "b")), ImmutableSet.of());
         assertThatThrownBy(() -> accessControlManager.checkCanKillQueryOwnedBy(new SystemSecurityContext(bob, queryId), "any"))
                 .isInstanceOf(AccessDeniedException.class)
-                .hasMessage("Access Denied: Cannot view query");
+                .hasMessage("Access Denied: Cannot kill query");
     }
 
     @Test(enabled = false)
