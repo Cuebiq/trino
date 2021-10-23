@@ -11,6 +11,9 @@ can_access_catalog(catalog, access_mode) = access
     access = match_access_mode(rule_access_mode(catalog_rules[i]),access_mode)
 }
 
+requiredCatalogAccess(requiredPrivilege) = "READ_ONLY"{
+    ["SELECT","GRANT_SELECT"][_] == requiredPrivilege
+} else = "ALL"
 
 match_access_mode(rule_access,request_access)
 {

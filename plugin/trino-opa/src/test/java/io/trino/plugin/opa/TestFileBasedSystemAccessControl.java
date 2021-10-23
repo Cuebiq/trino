@@ -472,10 +472,10 @@ public class TestFileBasedSystemAccessControl
                 .build());
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableFilterNoAccess()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-no-access.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-no-access.json",Arrays.asList("filterTables"));
 
         Set<SchemaTableName> tables = ImmutableSet.<SchemaTableName>builder()
                 .add(new SchemaTableName("restricted", "any"))
@@ -486,19 +486,19 @@ public class TestFileBasedSystemAccessControl
         assertEquals(accessControl.filterTables(BOB, "any", tables), ImmutableSet.of());
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForFilterColumnsWithNoAccess()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-no-access.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-no-access.json",Arrays.asList("filterColumns"));
         assertEquals(
                 accessControl.filterColumns(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"), ImmutableSet.of("a")),
                 ImmutableSet.of());
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanInsertIntoTable()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanInsertIntoTable"));
 
         accessControl.checkCanInsertIntoTable(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
         accessControl.checkCanInsertIntoTable(CHARLIE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
@@ -506,109 +506,109 @@ public class TestFileBasedSystemAccessControl
         assertAccessDenied(() -> accessControl.checkCanInsertIntoTable(BOB, new CatalogSchemaTableName("some-catalog", "test", "test")), INSERT_TABLE_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanDropTable()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanDropTable"));
 
         accessControl.checkCanDropTable(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
         assertAccessDenied(() -> accessControl.checkCanDropTable(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable")), DROP_TABLE_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanDropMaterializedView()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanDropMaterializedView"));
 
         accessControl.checkCanDropMaterializedView(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bob-materialized-view"));
         assertAccessDenied(() -> accessControl.checkCanDropMaterializedView(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bob-materialized-view")), DROP_MATERIALIZED_VIEW_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanCreateMaterializedView()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanCreateMaterializedView"));
 
         accessControl.checkCanCreateMaterializedView(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bob-materialized-view"));
         assertAccessDenied(() -> accessControl.checkCanCreateMaterializedView(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bob-materialized-view")), CREATE_MATERIALIZED_VIEW_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanRefreshMaterializedView()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanRefreshMaterializedView"));
 
         accessControl.checkCanRefreshMaterializedView(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bob-materialized-view"));
         assertAccessDenied(() -> accessControl.checkCanRefreshMaterializedView(UNKNOWN, new CatalogSchemaTableName("some-catalog", "bobschema", "bob-materialized-view")), REFRESH_MATERIALIZED_VIEW_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanDeleteFromTable()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanDeleteFromTable"));
 
         accessControl.checkCanDeleteFromTable(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
         assertAccessDenied(() -> accessControl.checkCanDeleteFromTable(CHARLIE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable")), DELETE_TABLE_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanGrantTablePrivilege()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanGrantTablePrivilege"));
 
         accessControl.checkCanGrantTablePrivilege(ADMIN, Privilege.DELETE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"), null, false);
         assertAccessDenied(() -> accessControl.checkCanGrantTablePrivilege(BOB, Privilege.DELETE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"), null, false), GRANT_DELETE_PRIVILEGE_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanRevokeTablePrivilege()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanRevokeTablePrivilege"));
 
         accessControl.checkCanRevokeTablePrivilege(ADMIN, Privilege.DELETE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"), null, false);
         assertAccessDenied(() -> accessControl.checkCanRevokeTablePrivilege(BOB, Privilege.DELETE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"), null, false), REVOKE_DELETE_PRIVILEGE_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanShowCreateTable()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanShowCreateTable"));
 
         accessControl.checkCanShowCreateTable(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
         assertAccessDenied(() -> accessControl.checkCanShowCreateTable(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable")), CREATE_TABLE_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanAddColumn()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanAddColumn"));
 
         accessControl.checkCanAddColumn(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
         assertAccessDenied(() -> accessControl.checkCanAddColumn(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable")), ADD_COLUMNS_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanDropColumn()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanDropColumn"));
 
         accessControl.checkCanDropColumn(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
         assertAccessDenied(() -> accessControl.checkCanDropColumn(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable")), DROP_COLUMNS_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanRenameColumn()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanRenameColumn"));
 
         accessControl.checkCanRenameColumn(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
         assertAccessDenied(() -> accessControl.checkCanRenameColumn(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable")), RENAME_COLUMNS_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testCheckCanSetTableAuthorizationForAdmin()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanSetTableAuthorization","checkCanSetViewAuthorization"));
 
         accessControl.checkCanSetTableAuthorization(ADMIN, new CatalogSchemaTableName("some-catalog", "test", "test"), new TrinoPrincipal(PrincipalType.ROLE, "some_role"));
         accessControl.checkCanSetTableAuthorization(ADMIN, new CatalogSchemaTableName("some-catalog", "test", "test"), new TrinoPrincipal(PrincipalType.USER, "some_user"));
@@ -616,19 +616,19 @@ public class TestFileBasedSystemAccessControl
         accessControl.checkCanSetViewAuthorization(ADMIN, new CatalogSchemaTableName("some-catalog", "test", "test"), new TrinoPrincipal(PrincipalType.USER, "some_user"));
     }
 
-    @Test(enabled = false)
+    @Test
     public void testCheckCanSetViewAuthorizationForAdmin()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanSetTableAuthorization","checkCanSetViewAuthorization"));
 
         accessControl.checkCanSetViewAuthorization(ADMIN, new CatalogSchemaTableName("some-catalog", "test", "test"), new TrinoPrincipal(PrincipalType.ROLE, "some_role"));
         accessControl.checkCanSetViewAuthorization(ADMIN, new CatalogSchemaTableName("some-catalog", "test", "test"), new TrinoPrincipal(PrincipalType.USER, "some_user"));
     }
 
-    @Test(enabled = false)
+    @Test
     public void testCheckCanSetTableAuthorizationForOwner()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanSetTableAuthorization","checkCanSetViewAuthorization"));
 
         accessControl.checkCanSetTableAuthorization(ALICE, new CatalogSchemaTableName("some-catalog", "aliceschema", "test"), new TrinoPrincipal(PrincipalType.ROLE, "some_role"));
         accessControl.checkCanSetTableAuthorization(ALICE, new CatalogSchemaTableName("some-catalog", "aliceschema", "test"), new TrinoPrincipal(PrincipalType.USER, "some_user"));
@@ -636,46 +636,46 @@ public class TestFileBasedSystemAccessControl
         accessControl.checkCanSetViewAuthorization(ALICE, new CatalogSchemaTableName("some-catalog", "aliceschema", "test"), new TrinoPrincipal(PrincipalType.USER, "some_user"));
     }
 
-    @Test(enabled = false)
+    @Test
     public void testCheckCanSetViewAuthorizationForOwner()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanSetTableAuthorization","checkCanSetViewAuthorization"));
 
         accessControl.checkCanSetViewAuthorization(ALICE, new CatalogSchemaTableName("some-catalog", "aliceschema", "test"), new TrinoPrincipal(PrincipalType.ROLE, "some_role"));
         accessControl.checkCanSetViewAuthorization(ALICE, new CatalogSchemaTableName("some-catalog", "aliceschema", "test"), new TrinoPrincipal(PrincipalType.USER, "some_user"));
     }
 
-    @Test(enabled = false)
+    @Test
     public void testCheckCanSetTableAuthorizationForNonOwner()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanSetTableAuthorization","checkCanSetViewAuthorization"));
 
         assertAccessDenied(() -> accessControl.checkCanSetViewAuthorization(ALICE, new CatalogSchemaTableName("some-catalog", "test", "test"), new TrinoPrincipal(PrincipalType.ROLE, "some_role")), AUTH_VIEW_ACCESS_DENIED_MESSAGE);
         assertAccessDenied(() -> accessControl.checkCanSetViewAuthorization(ALICE, new CatalogSchemaTableName("some-catalog", "test", "test"), new TrinoPrincipal(PrincipalType.USER, "some_user")), AUTH_VIEW_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testCheckCanSetViewAuthorizationForNonOwner()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanSetTableAuthorization","checkCanSetViewAuthorization"));
 
         assertAccessDenied(() -> accessControl.checkCanSetViewAuthorization(ALICE, new CatalogSchemaTableName("some-catalog", "test", "test"), new TrinoPrincipal(PrincipalType.ROLE, "some_role")), AUTH_VIEW_ACCESS_DENIED_MESSAGE);
         assertAccessDenied(() -> accessControl.checkCanSetViewAuthorization(ALICE, new CatalogSchemaTableName("some-catalog", "test", "test"), new TrinoPrincipal(PrincipalType.USER, "some_user")), AUTH_VIEW_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanSetTableComment()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanSetTableComment"));
 
         accessControl.checkCanSetTableComment(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"));
         assertAccessDenied(() -> accessControl.checkCanSetTableComment(BOB, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable")), TABLE_COMMENT_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testTableRulesForCheckCanRenameTable()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("checkCanRenameTable"));
 
         accessControl.checkCanRenameTable(ADMIN, new CatalogSchemaTableName("some-catalog", "bobschema", "bobtable"), new CatalogSchemaTableName("some-catalog", "aliceschema", "newbobtable"));
         accessControl.checkCanRenameTable(ALICE, new CatalogSchemaTableName("some-catalog", "aliceschema", "alicetable"), new CatalogSchemaTableName("some-catalog", "aliceschema", "newalicetable"));
@@ -686,8 +686,7 @@ public class TestFileBasedSystemAccessControl
     @Test(enabled = false)
     public void testCanSetUserOperations()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("catalog_principal.json");
-
+        SystemAccessControl accessControl = newOpaSystemAccessControl("catalog_principal.json",Arrays.asList("checkCanSetUser"));
         try {
             accessControl.checkCanSetUser(Optional.empty(), alice.getUser());
             throw new AssertionError("expected AccessDeniedException");
@@ -1072,7 +1071,7 @@ public class TestFileBasedSystemAccessControl
     @Test(enabled = false)
     public void testSchemaRulesForCheckCanShowTables()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-visibility.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-visibility.json",Arrays.asList("checkCanShowTables"));
 
         accessControl.checkCanShowTables(ADMIN, new CatalogSchemaName("specific-catalog", "specific-schema"));
         accessControl.checkCanShowTables(ADMIN, new CatalogSchemaName("bob-catalog", "bob-schema"));
