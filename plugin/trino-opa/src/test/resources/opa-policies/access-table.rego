@@ -1,6 +1,6 @@
 package io.trino.spi.security.SystemAccessControl
 
-table_rules = data.rules.tables
+table_rules = data.rules.tables {data.rules.tables} else = [{"privileges": ["SELECT", "INSERT", "UPDATE", "DELETE", "OWNERSHIP"]}]
 
 getRowFilter =  {
 	 "identity": user,
@@ -36,6 +36,9 @@ checkCanShowTables{
 
 default checkCanInsertIntoTable = false
 checkCanInsertIntoTable = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"INSERT")
+
+default checkCanCreateTable = false
+checkCanCreateTable = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanDropTable = false
 checkCanDropTable = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
@@ -112,4 +115,6 @@ checkTablePermission(catalog,schema,table,privilege) = false {
 }else = true {
     count(filter_table_rules(catalog,schema,table)) == 0
     count(input.columns) == 0
+}else = true {
+     count(table_rules)==0
 }

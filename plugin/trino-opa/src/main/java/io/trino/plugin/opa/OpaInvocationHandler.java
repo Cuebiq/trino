@@ -139,14 +139,15 @@ public class OpaInvocationHandler
     {
         List<String> configured = opaConfig.getMethodsToCheck();
         if(opaConfig.getMethodsToCheck().isEmpty()) {
-            configured = Arrays.asList(
-                    "checkCanSetUser",
-                    "filterCatalogs",
-                    "getRowFilter",
-                    "checkCanAccessCatalog",
-                    "checkCanShowTables",
-                    "getColumnMask"
-            );
+            return !policy.equals("getEventListeners");
+//            configured = Arrays.asList(
+//                    "checkCanSetUser",
+//                    "filterCatalogs",
+//                    "getRowFilter",
+//                    "checkCanAccessCatalog",
+//                    "checkCanShowTables",
+//                    "getColumnMask"
+//            );
         }
         return configured.contains(policy);
     }

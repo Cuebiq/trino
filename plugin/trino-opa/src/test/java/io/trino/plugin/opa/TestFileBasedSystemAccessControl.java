@@ -15,6 +15,7 @@ package io.trino.plugin.opa;/*
 import com.bisnode.opa.client.OpaClient;
 import com.bisnode.opa.client.data.OpaDocument;
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -38,7 +39,6 @@ import org.testng.annotations.Test;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -50,15 +50,10 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.io.Files.copy;
-import static io.trino.plugin.base.security.FileBasedAccessControlConfig.SECURITY_CONFIG_FILE;
-import static io.trino.plugin.base.security.FileBasedAccessControlConfig.SECURITY_REFRESH_PERIOD;
 import static io.trino.spi.testing.InterfaceTestUtils.assertAllMethodsOverridden;
 import static io.trino.spi.type.VarcharType.VARCHAR;
 import static java.lang.String.format;
-import static java.lang.Thread.sleep;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.util.Files.newTemporaryFile;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -120,10 +115,12 @@ public class TestFileBasedSystemAccessControl
     private static final String SET_SYSTEM_SESSION_PROPERTY_ACCESS_DENIED_MESSAGE = "Access Denied: Cannot set system session property .*";
     private static final String SET_CATALOG_SESSION_PROPERTY_ACCESS_DENIED_MESSAGE = "Access Denied: Cannot set catalog session property .*";
 
-    @Test(enabled = false)
+    private static final String IMPERSONATE_USER_DENIED_MESSAGE = "Access Denied: User .* cannot impersonate user .*";
+
+    @Test
     public void testEmptyFile()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("empty.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("empty.json", ImmutableList.of());
 
         accessControl.checkCanCreateSchema(UNKNOWN, new CatalogSchemaName("some-catalog", "unknown"));
         accessControl.checkCanDropSchema(UNKNOWN, new CatalogSchemaName("some-catalog", "unknown"));
@@ -683,6 +680,25 @@ public class TestFileBasedSystemAccessControl
         assertAccessDenied(() -> accessControl.checkCanRenameTable(ALICE, new CatalogSchemaTableName("some-catalog", "aliceschema", "alicetable"), new CatalogSchemaTableName("some-catalog", "bobschema", "newalicetable")), RENAME_TABLE_ACCESS_DENIED_MESSAGE);
     }
 
+    @Test
+    public void testCanImpersonateUserOperations()
+    {
+        SystemAccessControl accessControl = newOpaSystemAccessControl("user-impersonation.json",Arrays.asList("checkCanImpersonateUser"));
+
+        accessControl.checkCanImpersonateUser(ALICE,"charlie");
+        accessControl.checkCanImpersonateUser(ALICE,"test");
+        assertAccessDenied(()->accessControl.checkCanImpersonateUser(ALICE,"bob"),IMPERSONATE_USER_DENIED_MESSAGE);
+
+        accessControl.checkCanImpersonateUser(BOB,"charlie");
+        accessControl.checkCanImpersonateUser(BOB,"test");
+        assertAccessDenied(()->accessControl.checkCanImpersonateUser(BOB,"alice"),IMPERSONATE_USER_DENIED_MESSAGE);
+
+        accessControl.checkCanImpersonateUser(CHARLIE,"test");
+        assertAccessDenied(()->accessControl.checkCanImpersonateUser(CHARLIE,"alice"),IMPERSONATE_USER_DENIED_MESSAGE);
+        assertAccessDenied(()->accessControl.checkCanImpersonateUser(CHARLIE,"bob"),IMPERSONATE_USER_DENIED_MESSAGE);
+        assertAccessDenied(()->accessControl.checkCanImpersonateUser(CHARLIE,"charlie"),IMPERSONATE_USER_DENIED_MESSAGE);
+    }
+
     @Test(enabled = false)
     public void testCanSetUserOperations()
     {
@@ -720,7 +736,7 @@ public class TestFileBasedSystemAccessControl
         catch (AccessDeniedException expected) {
         }
 
-        SystemAccessControl accessControlNoPatterns = newOpaSystemAccessControl("catalog.json");
+        SystemAccessControl accessControlNoPatterns = newOpaSystemAccessControl("catalog.json",Arrays.asList("checkCanSetUser"));
         accessControlNoPatterns.checkCanSetUser(kerberosValidAlice.getPrincipal(), kerberosValidAlice.getUser());
     }
 
@@ -1179,11 +1195,7 @@ public class TestFileBasedSystemAccessControl
     }
 
 
-    private SystemAccessControl newOpaSystemAccessControl(String resourceName)
-    {
-        return null;
-    }
-    private SystemAccessControl newOpaSystemAccessControl(String filename, List<String> methodsToTest)
+    private SystemAccessControl newOpaSystemAccessControl(String filename, List<String> opaMethods)
     {
         try {
 //        try {
@@ -1205,7 +1217,7 @@ public class TestFileBasedSystemAccessControl
 
             OpaConfig opaConfig = new OpaConfig();
             opaConfig.setUrl(opaUrl);
-            opaConfig.setMethodsToCheck(methodsToTest);
+            opaConfig.setMethodsToCheck(opaMethods);
             SystemAccessControl systemAccessControl = OpaSystemAccessControl.getInstance(opaConfig);
             return systemAccessControl;
 //        }

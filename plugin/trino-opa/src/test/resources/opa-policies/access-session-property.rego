@@ -9,6 +9,10 @@ checkCanSetSystemSessionProperty{
     object.get(filtered_sys_session_prop(input.propertyName)[0],"allow",false)
 }
 
+checkCanSetSystemSessionProperty{
+    count(system_session_properties_rules) == 0
+}
+
 filtered_sys_session_prop(property) = [p|p = system_session_properties_rules[x];
     match(system_session_properties_rules[x],"user", input.context.identity.user)
     matchAnyInArray(system_session_properties_rules[x],"group",input.context.identity.groups)
@@ -18,6 +22,10 @@ filtered_sys_session_prop(property) = [p|p = system_session_properties_rules[x];
 default checkCanSetCatalogSessionProperty = false
 checkCanSetCatalogSessionProperty{
     object.get(filtered_catalog_session_prop(input.catalogName, input.propertyName)[0],"allow",false)
+}
+
+checkCanSetCatalogSessionProperty{
+    count(catalog_session_properties_rules) == 0
 }
 
 filtered_catalog_session_prop(catalog,property) = [p|p = catalog_session_properties_rules[x];
