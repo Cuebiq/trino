@@ -886,7 +886,7 @@ public class TestFileBasedSystemAccessControl
     @Test
     public void testSessionPropertyRules()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-session-property.json",Arrays.asList("checkCanSetSystemSessionProperty,checkCanSetCatalogSessionProperty"));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-session-property.json",Arrays.asList("checkCanSetSystemSessionProperty","checkCanSetCatalogSessionProperty"));
 
         accessControl.checkCanSetSystemSessionProperty(ADMIN, "dangerous");
         accessControl.checkCanSetSystemSessionProperty(ADMIN, "any");
@@ -918,11 +918,10 @@ public class TestFileBasedSystemAccessControl
         assertAccessDenied(() -> accessControl.checkCanSetCatalogSessionProperty(JOE, "staff-catalog", "staff"), SET_CATALOG_SESSION_PROPERTY_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testSessionPropertyDocsExample()
     {
-        String rulesFile = new File("../../docs/src/main/sphinx/security/session-property-access.json").getAbsolutePath();
-        SystemAccessControl accessControl = newOpaSystemAccessControl(ImmutableMap.of("security.config-file", rulesFile));
+        SystemAccessControl accessControl = newOpaSystemAccessControl("session-property-access.json",Arrays.asList("checkCanSetSystemSessionProperty","checkCanSetCatalogSessionProperty"));
         SystemSecurityContext bannedUser = new SystemSecurityContext(Identity.ofUser("banned_user"), queryId);
 
         accessControl.checkCanSetSystemSessionProperty(ADMIN, "any");
@@ -942,10 +941,10 @@ public class TestFileBasedSystemAccessControl
         assertAccessDenied(() -> accessControl.checkCanSetCatalogSessionProperty(bannedUser, "hive", "bucket_execution_enabled"), SET_CATALOG_SESSION_PROPERTY_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testFilterCatalogs()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-visibility.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-visibility.json",Arrays.asList("filterCatalogs"));
         Set<String> allCatalogs = ImmutableSet.of(
                 "alice-catalog",
                 "bob-catalog",
@@ -965,10 +964,10 @@ public class TestFileBasedSystemAccessControl
         assertEquals(accessControl.filterCatalogs(CHARLIE, allCatalogs), charlieCatalogs);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testSchemaRulesForCheckCanShowSchemas()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-visibility.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-visibility.json",Arrays.asList("checkCanShowSchemas"));
 
         accessControl.checkCanShowSchemas(ADMIN, "specific-catalog");
         accessControl.checkCanShowSchemas(ADMIN, "session-catalog");

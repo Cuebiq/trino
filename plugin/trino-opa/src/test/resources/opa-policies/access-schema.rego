@@ -2,6 +2,13 @@ package io.trino.spi.security.SystemAccessControl
 
 schema_rules = data.rules.schemas {data.rules.schemas} else = [{"owner": true}]
 
+
+default checkCanShowSchemas = false
+checkCanShowSchemas {
+	can_access_catalog(input.catalogName,"READ_ONLY")
+    anyCatalogPermissionsRule(input.catalogName)
+}
+
 default checkCanCreateSchema = false
 checkCanCreateSchema {
 	isSchemaOwner(input.schema.catalogName,input.schema.schemaName)
