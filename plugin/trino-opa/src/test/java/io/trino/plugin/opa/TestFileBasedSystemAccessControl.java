@@ -1114,10 +1114,10 @@ public class TestFileBasedSystemAccessControl
         assertAccessDenied(() -> accessControl.checkCanShowTables(CHARLIE, new CatalogSchemaName("unknown", "any")), SHOWN_TABLES_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testGetColumnMask()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("getColumnMask"));
 
         assertEquals(
                 accessControl.getColumnMask(
