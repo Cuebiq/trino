@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.google.common.base.Strings;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.SystemAccessControl;
@@ -34,6 +35,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 
 public class OpaInvocationHandler
         implements InvocationHandler
@@ -57,7 +59,6 @@ public class OpaInvocationHandler
         module.addDeserializer(ViewExpression.class, new ViewExpressionDeserializer(ViewExpression.class));
         mapper.registerModule(module);
 
-
         client = OpaClient.builder()
                 .opaConfiguration(config.getUrl())
                 .build();
@@ -79,9 +80,8 @@ public class OpaInvocationHandler
             genericReturnType = Object.class;
         }
         Object result = client.queryForDocument(new QueryForDocumentRequest(input, rulepath(policy)), genericReturnType);
-        if (method.getReturnType().equals(Void.TYPE) ) {
-            if(result instanceof Boolean)
-            {
+        if (method.getReturnType().equals(Void.TYPE)) {
+            if (result instanceof Boolean) {
                 if ((Boolean) result) {
                     return null;
                 }
@@ -89,27 +89,23 @@ public class OpaInvocationHandler
                     return throwDefaultException(method, args);
                 }
             }
-            else if("default-exception".equals(result))
-            {
+            else if ("default-exception".equals(result)) {
                 return throwDefaultException(method, args);
             }
-            else if(result instanceof String && !((String)result).isEmpty())
-            {
-                throw new AccessDeniedException((String)result);
+            else if (result instanceof String && !((String) result).isEmpty()) {
+                throw new AccessDeniedException((String) result);
             }
-            else if(result instanceof List && !((List<?>) result).isEmpty())
-            {
-                //TODO: format message
-                throw new AccessDeniedException(result.toString());
-            }else
-            {
+            else if (result instanceof List && !((List<?>) result).isEmpty()) {
+                StringJoiner stringJoiner = new StringJoiner("\\n");
+                ((List<String>) result).forEach(s -> stringJoiner.add(s));
+                throw new AccessDeniedException(stringJoiner.toString());
+            }
+            else {
                 return null;
             }
-
         }
 
         return result;
-
     }
 
     private Object throwDefaultException(Method method, Object[] args)
@@ -125,7 +121,9 @@ public class OpaInvocationHandler
 
     private String rulepath(String policy)
     {
-        return "io/trino/spi/security/SystemAccessControl/" + policy;
+        String opaPackage = opaConfig.getOpaPackage();
+        opaPackage = opaPackage.endsWith("/") ? opaPackage : opaPackage.concat("/");
+        return opaPackage + policy;
     }
 
     private Object executeDefaultMethod(Method method, Object[] args)
@@ -138,16 +136,8 @@ public class OpaInvocationHandler
     private boolean isPolicyConfigured(String policy)
     {
         List<String> configured = opaConfig.getMethodsToCheck();
-        if(opaConfig.getMethodsToCheck().isEmpty()) {
+        if (opaConfig.getMethodsToCheck().isEmpty()) {
             return !policy.equals("getEventListeners");
-//            configured = Arrays.asList(
-//                    "checkCanSetUser",
-//                    "filterCatalogs",
-//                    "getRowFilter",
-//                    "checkCanAccessCatalog",
-//                    "checkCanShowTables",
-//                    "getColumnMask"
-//            );
         }
         return configured.contains(policy);
     }
