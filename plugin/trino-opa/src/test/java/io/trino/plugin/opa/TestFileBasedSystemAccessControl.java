@@ -1014,10 +1014,10 @@ public class TestFileBasedSystemAccessControl
         assertAccessDenied(() -> accessControl.checkCanShowSchemas(CHARLIE, "unknown"), SHOWN_SCHEMAS_ACCESS_DENIED_MESSAGE);
     }
 
-    @Test(enabled = false)
+    @Test
     public void testFilterSchemas()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-visibility.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-visibility.json",Arrays.asList("filterSchemas"));
 
         assertEquals(accessControl.filterSchemas(ADMIN, "specific-catalog", ImmutableSet.of("specific-schema", "unknown")), ImmutableSet.of("specific-schema", "unknown"));
         assertEquals(accessControl.filterSchemas(ALICE, "specific-catalog", ImmutableSet.of("specific-schema", "unknown")), ImmutableSet.of("specific-schema"));
@@ -1065,7 +1065,7 @@ public class TestFileBasedSystemAccessControl
         assertEquals(accessControl.filterSchemas(CHARLIE, "session-catalog", ImmutableSet.of("session-schema", "unknown")), ImmutableSet.of());
     }
 
-    @Test(enabled = false)
+    @Test
     public void testSchemaRulesForCheckCanShowTables()
     {
         SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-visibility.json",Arrays.asList("checkCanShowTables"));

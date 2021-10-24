@@ -4,11 +4,15 @@ catalog_rules = data.rules.catalogs { data.rules.catalogs } else = [{"catalog": 
 
 
 filterCatalogs[catalog]{
-    can_access_catalog(input.catalogs[i],"READ_ONLY")
-    anyCatalogPermissionsRule(catalog)
+    check_any_catalog_access(input.catalogs[i])
     catalog = input.catalogs[i]
 }
 
+check_any_catalog_access(catalog)
+{
+    can_access_catalog(catalog,"READ_ONLY")
+    anyCatalogPermissionsRule(catalog)
+}
 
 anyCatalogPermissionsRule(catalog)
 {

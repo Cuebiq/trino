@@ -11,13 +11,7 @@ filterTables[tt]{
 
 default checkCanShowTables = false
 checkCanShowTables{
-    schema := input.table.schemaTable.schema
-    catalog := input.table.catalog
-    can_access_catalog(input.table.catalog,"READ_ONLY")
-    match(table_rules[i],"catalog",catalog)
-    match(table_rules[i],"user",input.context.identity.user)
-    matchAnyInArray(table_rules[i],"group",input.context.identity.groups)
-    match(table_rules[i],"schema",schema)
+   check_any_schema_access(input.schema.catalogName, input.schema.schemaName)
 }
 
 default checkCanInsertIntoTable = false
