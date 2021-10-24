@@ -1,10 +1,6 @@
 package io.trino.spi.security.SystemAccessControl
 
 
-#getColumnMask = null {
-#    input.table.schemaTableName.schema == "information_schema"
-#}
-
 getColumnMask = {
     	 "identity" : user,
          "catalog": input.tableName.catalog,
@@ -13,16 +9,16 @@ getColumnMask = {
     }
 {
    catalog := input.tableName.catalog
-       schema := input.tableName.schemaTable.schema
-       table := input.tableName.schemaTable.table
-       column := input.columnName
-       input.tableName.schemaTable.schema != "information_schema"
-       rule = filter_column_rules(catalog,schema,table,column)[0]
-       expression = rule.mask
-       user = masked_user(rule)
+   schema := input.tableName.schemaTable.schema
+   table := input.tableName.schemaTable.table
+   column := input.columnName
+   input.tableName.schemaTable.schema != "information_schema"
+   rule = filter_column_rules(catalog,schema,table,column)[0]
+   expression = rule.mask
+   user = column_masked_user(rule)
 }
 
-masked_user(rule) = user{
+column_masked_user(rule) = user{
     user = rule.mask_environment.user
 }
 else = input.context.identity.user

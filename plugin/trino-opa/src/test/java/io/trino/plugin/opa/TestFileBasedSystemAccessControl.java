@@ -1144,10 +1144,10 @@ public class TestFileBasedSystemAccessControl
                 new ViewExpression("mask-user", Optional.of("some-catalog"), Optional.of("bobschema"), "'mask-with-user'"));
     }
 
-    @Test(enabled = false)
+    @Test
     public void testGetRowFilter()
     {
-        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json");
+        SystemAccessControl accessControl = newOpaSystemAccessControl("file-based-system-access-table.json",Arrays.asList("getRowFilter"));
 
         assertEquals(
                 accessControl.getRowFilter(ALICE, new CatalogSchemaTableName("some-catalog", "bobschema", "bobcolumns")),
@@ -1178,47 +1178,6 @@ public class TestFileBasedSystemAccessControl
         assertAllMethodsOverridden(SystemAccessControl.class, FileBasedSystemAccessControl.class);
     }
 
-    @Test(enabled = false)
-    public void testRefreshing()
-            throws Exception
-    {
-        File configFile = newTemporaryFile();
-        configFile.deleteOnExit();
-        copy(new File(getResourcePath("catalog.json")), configFile);
-
-        SystemAccessControl accessControl = newOpaSystemAccessControl(ImmutableMap.of(
-                SECURITY_CONFIG_FILE, configFile.getAbsolutePath(),
-                SECURITY_REFRESH_PERIOD, "1ms"));
-
-        SystemSecurityContext alice = new SystemSecurityContext(TestFileBasedSystemAccessControl.alice, queryId);
-        accessControl.checkCanCreateView(alice, aliceView);
-        accessControl.checkCanCreateView(alice, aliceView);
-        accessControl.checkCanCreateView(alice, aliceView);
-
-        copy(new File(getResourcePath("security-config-file-with-unknown-rules.json")), configFile);
-        sleep(2);
-
-        assertThatThrownBy(() -> accessControl.checkCanCreateView(alice, aliceView))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageStartingWith("Invalid JSON file");
-
-        // test if file based cached control was not cached somewhere
-        assertThatThrownBy(() -> accessControl.checkCanCreateView(alice, aliceView))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageStartingWith("Invalid JSON file");
-
-        copy(new File(getResourcePath("catalog.json")), configFile);
-        sleep(2);
-
-        accessControl.checkCanCreateView(alice, aliceView);
-    }
-
-    @Test(enabled = false)
-    public void parseUnknownRules()
-    {
-        assertThatThrownBy(() -> newOpaSystemAccessControl("security-config-file-with-unknown-rules.json"))
-                .hasMessageContaining("Invalid JSON");
-    }
 
     private SystemAccessControl newOpaSystemAccessControl(String resourceName)
     {

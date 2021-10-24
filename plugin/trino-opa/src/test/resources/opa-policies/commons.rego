@@ -1,10 +1,5 @@
 package io.trino.spi.security.SystemAccessControl
 
-
-
-
-
-
 default_column_rules = [] #[{ "name":".*","allow" : true}]
 
 isSchemaOwner(catalog,schema){
@@ -13,14 +8,13 @@ isSchemaOwner(catalog,schema){
 }
 else = false
 
-filter_schema_rules(catalog,schema) = rules{
-    rules=[ r| r = schema_rules[i];
+filter_schema_rules(catalog,schema) = [ r| r = schema_rules[i];
         match(schema_rules[i],"catalog",catalog)
         match(schema_rules[i],"schema",schema)
         match(schema_rules[i],"user",input.context.identity.user)
         matchAnyInArray(schema_rules[i],"group",input.context.identity.groups)
-    ]
-}
+]
+
 
 table_allowed(catalog,schema,table){
      isSchemaOwner(catalog,schema)

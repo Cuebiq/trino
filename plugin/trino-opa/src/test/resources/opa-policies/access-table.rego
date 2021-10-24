@@ -2,6 +2,26 @@ package io.trino.spi.security.SystemAccessControl
 
 table_rules = data.rules.tables
 
+getRowFilter =  {
+	 "identity": user,
+     "catalog": input.tableName.catalog,
+     "schema": input.tableName.schemaTable.schema,
+     "expression": expression
+}{
+    catalog := input.tableName.catalog
+    schema := input.tableName.schemaTable.schema
+    table := input.tableName.schemaTable.table
+    input.tableName.schemaTable.schema != "information_schema"
+    rule = filter_table_rules(catalog,schema,table)[0]
+    expression = rule.filter
+    user = filter_masked_user(rule)
+}
+
+filter_masked_user(rule) = user{
+    user = rule.filter_environment.user
+}
+else = input.context.identity.user
+
 
 filterTables[tt]{
     table_allowed(input.catalogName,input.tableNames[i].schema,input.tableNames[i].table)
