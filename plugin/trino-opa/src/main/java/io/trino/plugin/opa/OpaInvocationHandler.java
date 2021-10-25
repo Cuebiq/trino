@@ -135,9 +135,9 @@ public class OpaInvocationHandler
 
     private boolean isPolicyConfigured(String policy)
     {
-        List<String> configured = opaConfig.getMethodsToCheck();
-        if (opaConfig.getMethodsToCheck().isEmpty()) {
-            return !policy.equals("getEventListeners");
+        List<String> configured = opaConfig.getMethodsToInclude();
+        if (configured.isEmpty()) {
+            return !policy.equals("getEventListeners") && !opaConfig.getMethodsToExclude().contains(policy);
         }
         return configured.contains(policy);
     }

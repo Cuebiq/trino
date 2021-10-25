@@ -1213,7 +1213,7 @@ public class TestOpaBasedSystemAccessControl
             client.createOrOverwriteDocument(document);
 
             OpaConfig opaConfig = new OpaConfig()
-                    .methodsToCheck(opaMethods)
+                    .methodsToInclude(opaMethods)
                     .url(opaUrl);
             SystemAccessControl systemAccessControl = OpaSystemAccessControl.getInstance(opaConfig);
             return systemAccessControl;
