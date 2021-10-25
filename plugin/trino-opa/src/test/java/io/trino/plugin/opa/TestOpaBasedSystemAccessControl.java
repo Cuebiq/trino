@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharStreams;
 import io.trino.plugin.base.security.FileBasedSystemAccessControl;
+import io.trino.plugin.opa.os.utils.OsCheck;
 import io.trino.spi.QueryId;
 import io.trino.spi.connector.CatalogSchemaName;
 import io.trino.spi.connector.CatalogSchemaTableName;
@@ -1223,14 +1224,30 @@ public class TestOpaBasedSystemAccessControl
         }
     }
 
-//    @BeforeClass
+    @BeforeClass
     public void setUp()
     {
         try {
+
+            String binFolder = getClass().getClassLoader().getResource("bin").getPath()+"/";
+            String cmd = "";
+            OsCheck.OSType ostype=OsCheck.getOperatingSystemType();
+            switch (ostype) {
+                case MacOS:
+                    cmd = binFolder.concat("opa_darwin");
+                    break;
+                case Linux:
+                    cmd = binFolder.concat("opa_linux");
+                    break;
+                case Windows:
+                case Other:
+                    throw new IllegalArgumentException("Test can be run on MacOS and Linux");
+            }
+
             String path = getClass().getClassLoader().getResource("opa-policies").getPath()+"/";
 
-            String cmd = "opa run --server --log-level=debug --addr=0.0.0.0:8181 " + path;
-            process = Runtime.getRuntime().exec(cmd);
+            process =  new ProcessBuilder().command(cmd, "run", "--server", "--log-level=debug", "--addr=0.0.0.0:8181", path)
+                    .inheritIO().start();
 
             Thread.sleep(3000);
         }
@@ -1239,10 +1256,9 @@ public class TestOpaBasedSystemAccessControl
         }
     }
 
-//    @AfterClass
+    @AfterClass
     public void shutdown()
     {
-
         try {
             process.destroy();
             process.waitFor();
