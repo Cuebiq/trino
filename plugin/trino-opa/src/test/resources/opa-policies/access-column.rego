@@ -18,16 +18,6 @@ getColumnMask = {
    user = column_masked_user(rule)
 }
 
-column_masked_user(rule) = user{
-    user = rule.mask_environment.user
-}
-else = input.context.identity.user
-
-
-filter_column_rules(catalog,schema,table,column) = [c| c = filter_table_rules(catalog,schema,table)[i].columns[j];
-	c.name == column
-]
-
 filterColumns[cc]{
     catalog := input.table.catalog
     schema := input.table.schemaTable.schema
@@ -62,10 +52,7 @@ checkCanShowColumns{
     count(rule_to_apply.privileges) > 0
 }
 
-
-
 default checkCanSelectFromColumns = false
-
 checkCanSelectFromColumns = false {
     not can_access_catalog(input.table.catalog,"READ_ONLY")
 } else = true {
@@ -84,12 +71,6 @@ checkCanSelectFromColumns = false {
     table := input.table.schemaTable.table
     count(filter_table_rules(catalog,schema,table))==0
     count(input.columns) == 0
-}
-
-
-default column_rules(rule_to_apply) = []
-column_rules(rule_to_apply) = rules {
-    rules := object.get(rule_to_apply,"columns",default_column_rules)
 }
 
 default checkCanCreateViewWithSelectFromColumns = "default-exception"
@@ -117,3 +98,22 @@ checkCanCreateViewWithSelectFromColumns = ""{
     all_columns_allowed(object.get(input,"columns",[]),rule_to_apply)
     has_privileges(rule_to_apply.privileges,["GRANT_SELECT"])
 }
+
+
+
+column_masked_user(rule) = user{
+    user = rule.mask_environment.user
+}
+else = input.context.identity.user
+
+
+filter_column_rules(catalog,schema,table,column) = [c| c = filter_table_rules(catalog,schema,table)[i].columns[j];
+	c.name == column
+]
+
+
+default column_rules(rule_to_apply) = []
+column_rules(rule_to_apply) = rules {
+    rules := object.get(rule_to_apply,"columns",default_column_rules)
+}
+

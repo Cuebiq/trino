@@ -17,11 +17,6 @@ getRowFilter =  {
     user = filter_masked_user(rule)
 }
 
-filter_masked_user(rule) = user{
-    user = rule.filter_environment.user
-}
-else = input.context.identity.user
-
 
 filterTables[tt]{
     table_allowed(input.catalogName,input.tableNames[i].schema,input.tableNames[i].table)
@@ -35,76 +30,76 @@ checkCanShowTables{
 }
 
 default checkCanInsertIntoTable = false
-checkCanInsertIntoTable = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"INSERT")
+checkCanInsertIntoTable = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"INSERT")
 
 default checkCanCreateTable = false
-checkCanCreateTable = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanCreateTable = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanDropTable = false
-checkCanDropTable = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanDropTable = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanGrantTablePrivilege = false
-checkCanGrantTablePrivilege = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanGrantTablePrivilege = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanRevokeTablePrivilege = false
-checkCanRevokeTablePrivilege = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanRevokeTablePrivilege = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanShowCreateTable = false
-checkCanShowCreateTable = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanShowCreateTable = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanAddColumn = false
-checkCanAddColumn = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanAddColumn = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanDropColumn = false
-checkCanDropColumn = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanDropColumn = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanRenameColumn = false
-checkCanRenameColumn = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanRenameColumn = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanSetTableAuthorization = false
-checkCanSetTableAuthorization = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanSetTableAuthorization = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanSetViewAuthorization = false
-checkCanSetViewAuthorization = checkTablePermission(input.view.catalog,input.view.schemaTable.schema,input.view.schemaTable.table,"OWNERSHIP")
+checkCanSetViewAuthorization = check_table_permission(input.view.catalog,input.view.schemaTable.schema,input.view.schemaTable.table,"OWNERSHIP")
 
 default checkCanSetTableComment = false
-checkCanSetTableComment = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+checkCanSetTableComment = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
 default checkCanRenameTable = false
 checkCanRenameTable{
-    checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
-    checkTablePermission(input.newTable.catalog,input.newTable.schemaTable.schema,input.newTable.schemaTable.table,"OWNERSHIP")
+    check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
+    check_table_permission(input.newTable.catalog,input.newTable.schemaTable.schema,input.newTable.schemaTable.table,"OWNERSHIP")
 }
 
-
-
 default checkCanDeleteFromTable = false
-checkCanDeleteFromTable = checkTablePermission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"DELETE")
+checkCanDeleteFromTable = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"DELETE")
 
 
 default checkCanDropMaterializedView = false
-checkCanDropMaterializedView = checkTablePermission(
+checkCanDropMaterializedView = check_table_permission(
     input.materializedView.catalog,
     input.materializedView.schemaTable.schema,
     input.materializedView.schemaTable.table,"OWNERSHIP")
 
 default checkCanCreateMaterializedView = false
-checkCanCreateMaterializedView = checkTablePermission(
+checkCanCreateMaterializedView = check_table_permission(
     input.materializedView.catalog,
     input.materializedView.schemaTable.schema,
     input.materializedView.schemaTable.table,"OWNERSHIP")
 
 default checkCanRefreshMaterializedView = false
-checkCanRefreshMaterializedView = checkTablePermission(
+checkCanRefreshMaterializedView = check_table_permission(
     input.materializedView.catalog,
     input.materializedView.schemaTable.schema,
     input.materializedView.schemaTable.table,"UPDATE")
 
+filter_masked_user(rule) = user{
+    user = rule.filter_environment.user
+}
+else = input.context.identity.user
 
-
-
-checkTablePermission(catalog,schema,table,privilege) = false {
-    not can_access_catalog(input.table.catalog,requiredCatalogAccess(privilege))
+check_table_permission(catalog,schema,table,privilege) = false {
+    not can_access_catalog(input.table.catalog,required_catalog_access(privilege))
 } else = true {
     match(table_rules[i],"catalog",catalog)
     schema == "information_schema"

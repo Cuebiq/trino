@@ -4,18 +4,18 @@ system_information_rules = data.rules.system_information {data.rules.system_info
 
 
 default checkCanReadSystemInformation = false
-checkCanReadSystemInformation = checkCanSystemInformation(input.context.identity.user,"read")
+checkCanReadSystemInformation = check_can_system_information(input.context.identity.user,"read")
 
 default checkCanWriteSystemInformation = "Cannot write system information"
-checkCanWriteSystemInformation = checkCanSystemInformation(input.context.identity.user,"write")
+checkCanWriteSystemInformation = check_can_system_information(input.context.identity.user,"write")
 
 
-default checkCanSystemInformation(user,requiredAccess) = false
+default check_can_system_information(user,requiredAccess) = false
 checkCanSystemInformation(user,requiredAccess) = concat(" ",["Cannot", requiredAccess ,"system information"]) {
     count(system_information_rules) == 0
 }
 
-checkCanSystemInformation(user,requiredAccess)
+check_can_system_information(user,requiredAccess)
 {
     filtered_sys_inf_rules(user)[0].allow[_] == requiredAccess
 }

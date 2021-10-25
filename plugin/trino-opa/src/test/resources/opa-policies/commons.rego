@@ -2,7 +2,7 @@ package io.trino.spi.security.SystemAccessControl
 
 default_column_rules = [] #[{ "name":".*","allow" : true}]
 
-isSchemaOwner(catalog,schema){
+is_schema_owner(catalog,schema){
     can_access_catalog(catalog,"ALL")
 	filter_schema_rules(catalog,schema)[0].owner == true
 }
@@ -12,12 +12,12 @@ filter_schema_rules(catalog,schema) = [ r| r = schema_rules[i];
         match(schema_rules[i],"catalog",catalog)
         match(schema_rules[i],"schema",schema)
         match(schema_rules[i],"user",input.context.identity.user)
-        matchAnyInArray(schema_rules[i],"group",input.context.identity.groups)
+        match_any_in_array(schema_rules[i],"group",input.context.identity.groups)
 ]
 
 
 table_allowed(catalog,schema,table){
-     isSchemaOwner(catalog,schema)
+     is_schema_owner(catalog,schema)
 }
 
 table_allowed(catalog,schema,table) = false{
@@ -37,7 +37,7 @@ filter_table_rules(catalog,schema,table) = rules{
     rules= [ r| r = table_rules[i];
          match(r,"catalog",catalog)
          match(r,"user",input.context.identity.user)
-         matchAnyInArray(r,"group",input.context.identity.groups)
+         match_any_in_array(r,"group",input.context.identity.groups)
          match(r,"schema",schema)
          match(r,"table",table)
     ]

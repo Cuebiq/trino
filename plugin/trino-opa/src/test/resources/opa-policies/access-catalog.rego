@@ -11,24 +11,24 @@ filterCatalogs[catalog]{
 check_any_catalog_access(catalog)
 {
     can_access_catalog(catalog,"READ_ONLY")
-    anyCatalogPermissionsRule(catalog)
+    has_any_catalog_permissions_rule(catalog)
 }
 
-anyCatalogPermissionsRule(catalog)
+has_any_catalog_permissions_rule(catalog)
 {
     match(schema_rules[i],"catalog",catalog)
     match(schema_rules[i],"user",input.context.identity.user)
-    matchAnyInArray(schema_rules[i],"group",input.context.identity.groups)
+    match_any_in_array(schema_rules[i],"group",input.context.identity.groups)
     object.get(schema_rules[i],"owner",false) == true
 }else {
     match(table_rules[i],"catalog",catalog)
     match(table_rules[i],"user",input.context.identity.user)
-    matchAnyInArray(table_rules[i],"group",input.context.identity.groups)
+    match_any_in_array(table_rules[i],"group",input.context.identity.groups)
     count(object.get(table_rules[i],"privileges",[])) > 0
 } else {
     match(catalog_session_properties_rules[i],"catalog",catalog)
     match(catalog_session_properties_rules[i],"user",input.context.identity.user)
-    matchAnyInArray(catalog_session_properties_rules[i],"group",input.context.identity.groups)
+    match_any_in_array(catalog_session_properties_rules[i],"group",input.context.identity.groups)
     object.get(catalog_session_properties_rules[i],"allow",false) = true
 }
 
@@ -42,10 +42,10 @@ can_access_catalog(catalog, access_mode) = access
 filtered_catalog_rules(catalog) = [r|r = catalog_rules[i];
     match(catalog_rules[i],"catalog",catalog)
     match(catalog_rules[i],"user",input.context.identity.user)
-    matchAnyInArray(catalog_rules[i],"group",input.context.identity.groups)
+    match_any_in_array(catalog_rules[i],"group",input.context.identity.groups)
 ]
 
-requiredCatalogAccess(requiredPrivilege) = "READ_ONLY"{
+required_catalog_access(requiredPrivilege) = "READ_ONLY"{
     ["SELECT","GRANT_SELECT"][_] == requiredPrivilege
 } else = "ALL"
 

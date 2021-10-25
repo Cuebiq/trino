@@ -1223,7 +1223,7 @@ public class TestOpaBasedSystemAccessControl
         }
     }
 
-    @BeforeClass
+//    @BeforeClass
     public void setUp()
     {
         try {

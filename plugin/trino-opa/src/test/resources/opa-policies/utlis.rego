@@ -6,7 +6,7 @@ match(rule, field, value)
     regex.match(concat("",["^",object.get(rule,field,".*"),"$"]),value)
 }
 
-matchAnyInArray(rule, field, values)
+match_any_in_array(rule, field, values)
 {
     regex.match(concat("",["^",object.get(rule,field,".*"),"$"]),values[_])
 }else{
