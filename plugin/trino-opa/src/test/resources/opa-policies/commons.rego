@@ -33,15 +33,14 @@ table_allowed(catalog,schema,table) = false{
 
 
 
-filter_table_rules(catalog,schema,table) = rules{
-    rules= [ r| r = table_rules[i];
+filter_table_rules(catalog,schema,table) = [ r| r = table_rules[i];
          match(r,"catalog",catalog)
          match(r,"user",input.context.identity.user)
          match_any_in_array(r,"group",input.context.identity.groups)
          match(r,"schema",schema)
          match(r,"table",table)
     ]
-}
+
 
 
 all_columns_allowed(columns, table_rule)
