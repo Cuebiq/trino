@@ -33,6 +33,12 @@ has_any_catalog_permissions_rule(catalog)
 }
 
 
+default checkCanAccessCatalog = false
+checkCanAccessCatalog
+{
+    can_access_catalog(input.catalogName, "READ_ONLY")
+}
+
 default can_access_catalog(catalog, access_mode) = false
 can_access_catalog(catalog, access_mode) = access
 {
