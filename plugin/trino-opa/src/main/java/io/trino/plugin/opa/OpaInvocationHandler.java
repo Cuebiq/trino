@@ -20,7 +20,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.google.common.base.Strings;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
 import io.trino.spi.security.AccessDeniedException;
 import io.trino.spi.security.SystemAccessControl;
@@ -30,8 +29,8 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,12 +73,18 @@ public class OpaInvocationHandler
         }
         Map<String, Object> input = createInputParamatersMap(method.getParameters(), args);
 
-        Class<?> returnType = method.getReturnType();
+
         Type genericReturnType = method.getGenericReturnType();
-        if (returnType.equals(Void.TYPE)) {
-            genericReturnType = Object.class;
+        Object result = null;
+        if (genericReturnType instanceof ParameterizedType) {
+            result = client.queryForDocument(new QueryForDocumentRequest(input, rulepath(policy)), (ParameterizedType) genericReturnType);
         }
-        Object result = client.queryForDocument(new QueryForDocumentRequest(input, rulepath(policy)), genericReturnType);
+        else {
+            Class<?> returnType = method.getReturnType();
+            returnType = returnType.equals(Void.TYPE)?Object.class:returnType;
+            result = client.queryForDocument(new QueryForDocumentRequest(input, rulepath(policy)), returnType);
+        }
+
         if (method.getReturnType().equals(Void.TYPE)) {
             if (result instanceof Boolean) {
                 if ((Boolean) result) {

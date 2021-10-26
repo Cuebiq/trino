@@ -43,11 +43,11 @@
             <artifactId>slf4j-api</artifactId>
             <version>1.7.30</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>com.bisnode.opa</groupId>-->
-<!--            <artifactId>opa-java-client</artifactId>-->
-<!--            <version>0.2.0</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>com.bisnode.opa</groupId>
+            <artifactId>opa-java-client</artifactId>
+            <version>0.2.0-cuebiq.1</version>
+        </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
