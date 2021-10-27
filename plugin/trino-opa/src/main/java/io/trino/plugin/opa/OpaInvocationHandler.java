@@ -39,13 +39,12 @@ import java.util.StringJoiner;
 public class OpaInvocationHandler
         implements InvocationHandler
 {
-    private static SystemAccessControl denyAllSystemAccessControl = new SystemAccessControl() {};
+    private static final SystemAccessControl denyAllSystemAccessControl = new SystemAccessControl() {};
 
-    private static SystemAccessControl allowAllSystemAccessControl = new AllowAllSystemAccessControl();
-
-    private ObjectMapper mapper;
+    private static final SystemAccessControl allowAllSystemAccessControl = new AllowAllSystemAccessControl();
     private final OpaClient client;
-    private OpaConfig opaConfig;
+    private final ObjectMapper mapper;
+    private final OpaConfig opaConfig;
 
     public OpaInvocationHandler(OpaConfig config)
     {
@@ -73,7 +72,6 @@ public class OpaInvocationHandler
         }
         Map<String, Object> input = createInputParamatersMap(method.getParameters(), args);
 
-
         Type genericReturnType = method.getGenericReturnType();
         Object result = null;
         if (genericReturnType instanceof ParameterizedType) {
@@ -81,7 +79,7 @@ public class OpaInvocationHandler
         }
         else {
             Class<?> returnType = method.getReturnType();
-            returnType = returnType.equals(Void.TYPE)?Object.class:returnType;
+            returnType = returnType.equals(Void.TYPE) ? Object.class : returnType;
             result = client.queryForDocument(new QueryForDocumentRequest(input, rulepath(policy)), returnType);
         }
 

@@ -18,6 +18,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.trino.spi.security.SystemAccessControl;
+
 import static io.airlift.configuration.ConfigBinder.configBinder;
 
 public class OpaModule

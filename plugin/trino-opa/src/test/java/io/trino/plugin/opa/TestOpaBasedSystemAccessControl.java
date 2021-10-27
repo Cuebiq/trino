@@ -1,4 +1,4 @@
-package io.trino.plugin.opa;/*
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,10 +11,10 @@ package io.trino.plugin.opa;/*
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.trino.plugin.opa;
 
 import com.bisnode.opa.client.OpaClient;
 import com.bisnode.opa.client.data.OpaDocument;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -45,6 +45,7 @@ import javax.security.auth.kerberos.KerberosPrincipal;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -120,6 +121,23 @@ public class TestOpaBasedSystemAccessControl
 
     private static final String IMPERSONATE_USER_DENIED_MESSAGE = "Access Denied: User .* cannot impersonate user .*";
     private Process process;
+
+    private static void assertViewExpressionEquals(Optional<ViewExpression> result, ViewExpression expected)
+    {
+        assertTrue(result.isPresent());
+        ViewExpression actual = result.get();
+        assertEquals(actual.getIdentity(), expected.getIdentity(), "Identity");
+        assertEquals(actual.getCatalog(), expected.getCatalog(), "Catalog");
+        assertEquals(actual.getSchema(), expected.getSchema(), "Schema");
+        assertEquals(actual.getExpression(), expected.getExpression(), "Expression");
+    }
+
+    private static void assertAccessDenied(ThrowingCallable callable, String expectedMessage)
+    {
+        assertThatThrownBy(callable)
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageMatching(expectedMessage);
+    }
 
     @Test
     public void testEmptyFile()
@@ -1181,16 +1199,6 @@ public class TestOpaBasedSystemAccessControl
                 new ViewExpression("filter-user", Optional.of("some-catalog"), Optional.of("bobschema"), "starts_with(value, 'filter-with-user')"));
     }
 
-    private static void assertViewExpressionEquals(Optional<ViewExpression> result, ViewExpression expected)
-    {
-        assertTrue(result.isPresent());
-        ViewExpression actual = result.get();
-        assertEquals(actual.getIdentity(), expected.getIdentity(), "Identity");
-        assertEquals(actual.getCatalog(), expected.getCatalog(), "Catalog");
-        assertEquals(actual.getSchema(), expected.getSchema(), "Schema");
-        assertEquals(actual.getExpression(), expected.getExpression(), "Expression");
-    }
-
     @Test(enabled = false)
     public void testEverythingImplemented()
     {
@@ -1200,14 +1208,13 @@ public class TestOpaBasedSystemAccessControl
     private SystemAccessControl newOpaSystemAccessControl(String filename, List<String> opaMethods)
     {
         try {
-
             String opaUrl = "http://localhost:8181";
             OpaClient client = OpaClient.builder()
                     .opaConfiguration(opaUrl)
                     .build();
 
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("security_test_config/" + filename);
-            String opaData = CharStreams.toString(new InputStreamReader(resourceAsStream, Charsets.UTF_8));
+            String opaData = CharStreams.toString(new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8));
 
             OpaDocument document = new OpaDocument("rules", opaData);
             client.createOrOverwriteDocument(document);
@@ -1228,10 +1235,9 @@ public class TestOpaBasedSystemAccessControl
     public void setUp()
     {
         try {
-
-            String binFolder = getClass().getClassLoader().getResource("bin").getPath()+"/";
+            String binFolder = getClass().getClassLoader().getResource("bin").getPath() + "/";
             String cmd = "";
-            OsCheck.OSType ostype=OsCheck.getOperatingSystemType();
+            OsCheck.OSType ostype = OsCheck.getOperatingSystemType();
             switch (ostype) {
                 case MacOS:
                     cmd = binFolder.concat("opa_darwin");
@@ -1244,9 +1250,9 @@ public class TestOpaBasedSystemAccessControl
                     throw new IllegalArgumentException("Test can be run on MacOS and Linux");
             }
 
-            String path = getClass().getClassLoader().getResource("opa-policies").getPath()+"/";
+            String path = getClass().getClassLoader().getResource("opa-policies").getPath() + "/";
 
-            process =  new ProcessBuilder().command(cmd, "run", "--server", "--log-level=debug", "--addr=0.0.0.0:8181", path)
+            process = new ProcessBuilder().command(cmd, "run", "--server", "--log-level=debug", "--addr=0.0.0.0:8181", path)
                     .inheritIO().start();
 
             Thread.sleep(3000);
@@ -1276,12 +1282,5 @@ public class TestOpaBasedSystemAccessControl
     private String getResourcePath(String resourceName)
     {
         return this.getClass().getClassLoader().getResource(resourceName).getPath();
-    }
-
-    private static void assertAccessDenied(ThrowingCallable callable, String expectedMessage)
-    {
-        assertThatThrownBy(callable)
-                .isInstanceOf(AccessDeniedException.class)
-                .hasMessageMatching(expectedMessage);
     }
 }

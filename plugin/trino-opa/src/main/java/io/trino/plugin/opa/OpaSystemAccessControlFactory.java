@@ -20,7 +20,8 @@ import io.trino.spi.security.SystemAccessControlFactory;
 
 import java.util.Map;
 
-public class OpaSystemAccessControlFactory implements SystemAccessControlFactory
+public class OpaSystemAccessControlFactory
+        implements SystemAccessControlFactory
 {
     @Override
     public String getName()
@@ -38,7 +39,6 @@ public class OpaSystemAccessControlFactory implements SystemAccessControlFactory
                 .doNotInitializeLogging()
                 .setRequiredConfigurationProperties(config)
                 .initialize();
-
 
         return injector.getInstance(SystemAccessControl.class);
     }

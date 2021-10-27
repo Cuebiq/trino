@@ -20,12 +20,9 @@ import io.trino.spi.security.SystemAccessControlFactory;
 public class OpaPlugin
         implements Plugin
 {
-
     @Override
     public Iterable<SystemAccessControlFactory> getSystemAccessControlFactories()
     {
         return ImmutableList.of(new OpaSystemAccessControlFactory());
     }
-
-
 }
