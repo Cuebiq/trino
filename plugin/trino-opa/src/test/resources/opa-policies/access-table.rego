@@ -73,6 +73,18 @@ checkCanRenameColumn = check_table_permission(input.table.catalog,input.table.sc
 default checkCanSetTableAuthorization = false
 checkCanSetTableAuthorization = check_table_permission(input.table.catalog,input.table.schemaTable.schema,input.table.schemaTable.table,"OWNERSHIP")
 
+default checkCanCreateView = false
+checkCanCreateView = check_table_permission(input.view.catalog,input.view.schemaTable.schema,input.view.schemaTable.table,"OWNERSHIP")
+
+default checkCanRenameView = false
+checkCanRenameView{
+    check_table_permission(input.view.catalog,input.view.schemaTable.schema,input.view.schemaTable.table,"OWNERSHIP")
+    check_table_permission(input.newView.catalog,input.newView.schemaTable.schema,input.view.schemaTable.table,"OWNERSHIP")
+}
+
+default checkCanDropView = false
+checkCanDropView = check_table_permission(input.view.catalog,input.view.schemaTable.schema,input.view.schemaTable.table,"OWNERSHIP")
+
 default checkCanSetViewAuthorization = false
 checkCanSetViewAuthorization = check_table_permission(input.view.catalog,input.view.schemaTable.schema,input.view.schemaTable.table,"OWNERSHIP")
 

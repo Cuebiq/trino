@@ -142,7 +142,7 @@ public class OpaInvocationHandler
         if (configured.isEmpty()) {
             return !policy.equals("getEventListeners") && !opaConfig.getMethodsToExclude().contains(policy);
         }
-        return configured.contains(policy);
+        return configured.contains(policy) && !opaConfig.getMethodsToExclude().contains(policy);
     }
 
     private String mapMethodToPolicy(Method method)
