@@ -3152,7 +3152,7 @@ class StatementAnalyzer
                     }
                     if (identifierChainBasis.get().getBasisType() == TABLE) {
                         RelationType relationType = identifierChainBasis.get().getRelationType().orElseThrow();
-                        List<Field> fields = relationType.resolveVisibleFieldsWithRelationPrefix(Optional.of(prefix));
+                        List<Field> fields = filterInaccessibleFields(relationType.resolveVisibleFieldsWithRelationPrefix(Optional.of(prefix)));
                         if (fields.isEmpty()) {
                             throw semanticException(COLUMN_NOT_FOUND, allColumns, "SELECT * not allowed from relation that has no columns");
                         }
@@ -3178,7 +3178,7 @@ class StatementAnalyzer
                     throw semanticException(NOT_SUPPORTED, allColumns, "Column aliases not supported");
                 }
 
-                List<Field> fields = (List<Field>) scope.getRelationType().getVisibleFields();
+                List<Field> fields = filterInaccessibleFields((List<Field>) scope.getRelationType().getVisibleFields());
                 if (fields.isEmpty()) {
                     if (node.getFrom().isEmpty()) {
                         throw semanticException(COLUMN_NOT_FOUND, allColumns, "SELECT * not allowed in queries without FROM clause");
@@ -3245,6 +3245,20 @@ class StatementAnalyzer
                 }
             }
             analysis.setSelectAllResultFields(allColumns, itemOutputFieldBuilder.build());
+        }
+
+        private ImmutableList<Field> filterInaccessibleFields(List<Field> fields)
+        {
+            ImmutableList<Field> authorizedFields = fields.stream()
+                    .filter(field -> field.getOriginColumnName().isPresent())
+                    .filter(field -> field.getOriginTable().isPresent())
+                    .filter(field ->
+                            !accessControl.filterColumns(
+                                            session.toSecurityContext(),
+                                            field.getOriginTable().get().asCatalogSchemaTableName(),
+                                            Set.of(field.getOriginColumnName().get()))
+                                    .isEmpty()).collect(ImmutableList.toImmutableList());
+            return authorizedFields;
         }
 
         private void analyzeAllFieldsFromRowTypeExpression(
