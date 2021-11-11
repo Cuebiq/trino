@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Trino" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="io.trino.server.DevelopmentServer" />
+    <module name="trino-server-dev" />
+    <option name="VM_PARAMETERS" value="-ea -Dconfig=etc/config.properties -Dlog.levels-file=etc/log.properties -Djdk.attach.allowAttachSelf=true -Dcatalog.config-dir=etc/catalog -Daccess-control.config-files=etc/access-control.properties" />
+    <option name="WORKING_DIRECTORY" value="%MODULE_WORKING_DIR%" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
