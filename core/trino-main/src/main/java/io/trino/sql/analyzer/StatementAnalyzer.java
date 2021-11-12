@@ -3250,14 +3250,15 @@ class StatementAnalyzer
         private ImmutableList<Field> filterInaccessibleFields(List<Field> fields)
         {
             ImmutableList<Field> authorizedFields = fields.stream()
-                    .filter(field -> field.getOriginColumnName().isPresent())
-                    .filter(field -> field.getOriginTable().isPresent())
                     .filter(field ->
-                            !accessControl.filterColumns(
-                                            session.toSecurityContext(),
-                                            field.getOriginTable().get().asCatalogSchemaTableName(),
-                                            Set.of(field.getOriginColumnName().get()))
-                                    .isEmpty()).collect(ImmutableList.toImmutableList());
+                                field.getOriginColumnName().isEmpty() ||
+                                field.getOriginTable().isEmpty() ||
+                                field.isHidden() ||
+                                !accessControl.filterColumns(
+                                                session.toSecurityContext(),
+                                                field.getOriginTable().get().asCatalogSchemaTableName(),
+                                                Set.of(field.getOriginColumnName().get()))
+                                        .isEmpty()).collect(toImmutableList());
             return authorizedFields;
         }
 
