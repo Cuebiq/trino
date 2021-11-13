@@ -84,7 +84,6 @@ import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.collect.MoreCollectors.toOptional;
 import static io.trino.SystemSessionProperties.JOIN_DISTRIBUTION_TYPE;
 import static io.trino.SystemSessionProperties.PREFERRED_WRITE_PARTITIONING_MIN_NUMBER_OF_PARTITIONS;
-import static io.trino.SystemSessionProperties.USE_PREFERRED_WRITE_PARTITIONING;
 import static io.trino.plugin.hive.HdfsEnvironment.HdfsContext;
 import static io.trino.plugin.hive.HiveTestUtils.HDFS_ENVIRONMENT;
 import static io.trino.plugin.iceberg.IcebergQueryRunner.createIcebergQueryRunner;
@@ -2731,74 +2730,119 @@ public abstract class BaseIcebergConnectorTest
     }
 
     @Test(dataProvider = "repartitioningDataProvider")
-    public void testRepartitionDataOnCtas(String partitioning, int expectedFiles)
+    public void testRepartitionDataOnCtas(Session session, String partitioning, int expectedFiles)
     {
-        testRepartitionData(true, partitioning, expectedFiles);
+        testRepartitionData(session, "tpch.tiny.orders", true, partitioning, expectedFiles);
     }
 
     @Test(dataProvider = "repartitioningDataProvider")
-    public void testRepartitionDataOnInsert(String partitioning, int expectedFiles)
+    public void testRepartitionDataOnInsert(Session session, String partitioning, int expectedFiles)
     {
-        testRepartitionData(false, partitioning, expectedFiles);
-    }
-
-    private void testRepartitionData(boolean ctas, String partitioning, int expectedFiles)
-    {
-        String tableName = "repartition_" +
-                (ctas ? "ctas" : "insert") +
-                "_" + partitioning.replaceAll("[^a-zA-Z0-9]", "") +
-                "_" + randomTableSuffix();
-
-        // Even if connector returns ConnectorNewTableLayout with partitioning defined, engine can still choose to ignore it.
-        Session obeyConnectorPartitioning = Session.builder(getSession())
-                .setSystemProperty(USE_PREFERRED_WRITE_PARTITIONING, "true")
-                .setSystemProperty(PREFERRED_WRITE_PARTITIONING_MIN_NUMBER_OF_PARTITIONS, "1")
-                .build();
-
-        long rowCount = (long) computeScalar("SELECT count(*) FROM orders");
-
-        if (ctas) {
-            assertUpdate(
-                    obeyConnectorPartitioning,
-                    "CREATE TABLE " + tableName + " WITH (partitioning = ARRAY[" + partitioning + "]) " +
-                            "AS SELECT * FROM tpch.tiny.orders",
-                    rowCount);
-        }
-        else {
-            assertUpdate(
-                    "CREATE TABLE " + tableName + " WITH (partitioning = ARRAY[" + partitioning + "]) " +
-                            "AS SELECT * FROM tpch.tiny.orders WITH NO DATA",
-                    0);
-            // Use source table big enough so that there will be multiple pages being written.
-            assertUpdate(obeyConnectorPartitioning, "INSERT INTO " + tableName + " SELECT * FROM tpch.tiny.orders", rowCount);
-        }
-
-        // verify written data
-        assertThat(query("TABLE " + tableName))
-                .matches("TABLE orders");
-
-        // verify data files, i.e. repartitioning took place
-        assertThat(query("SELECT count(*) FROM \"" + tableName + "$files\""))
-                .matches("VALUES BIGINT '" + expectedFiles + "'");
-
-        assertUpdate("DROP TABLE " + tableName);
+        testRepartitionData(session, "tpch.tiny.orders", false, partitioning, expectedFiles);
     }
 
     @DataProvider
     public Object[][] repartitioningDataProvider()
     {
+        Session defaultSession = getSession();
+        // For identity-only partitioning, Iceberg connector returns ConnectorNewTableLayout with partitionColumns set, but without partitioning.
+        // This is treated by engine as "preferred", but not mandatory partitioning, and gets ignored if stats suggest number of partitions
+        // written is low. Without partitioning, number of files created is nondeterministic, as a writer (worker node) may or may not receive data.
+        Session obeyConnectorPartitioning = Session.builder(defaultSession)
+                .setSystemProperty(PREFERRED_WRITE_PARTITIONING_MIN_NUMBER_OF_PARTITIONS, "1")
+                .build();
+
         return new Object[][] {
                 // identity partitioning column
-                {"'orderstatus'", 3},
+                {obeyConnectorPartitioning, "'orderstatus'", 3},
                 // bucketing
-                {"'bucket(custkey, 13)'", 13},
+                {defaultSession, "'bucket(custkey, 13)'", 13},
                 // varchar-based
-                {"'truncate(comment, 1)'", 35},
+                {defaultSession, "'truncate(comment, 1)'", 35},
                 // complex; would exceed 100 open writers limit in IcebergPageSink without write repartitioning
-                {"'bucket(custkey, 4)', 'truncate(comment, 1)'", 131},
+                {defaultSession, "'bucket(custkey, 4)', 'truncate(comment, 1)'", 131},
                 // same column multiple times
-                {"'truncate(comment, 1)', 'orderstatus', 'bucket(comment, 2)'", 180},
+                {defaultSession, "'truncate(comment, 1)', 'orderstatus', 'bucket(comment, 2)'", 180},
         };
+    }
+
+    @Test
+    public void testStatsBasedRepartitionDataOnCtas()
+    {
+        testStatsBasedRepartitionData(true);
+    }
+
+    @Test
+    public void testStatsBasedRepartitionDataOnInsert()
+    {
+        testStatsBasedRepartitionData(false);
+    }
+
+    private void testStatsBasedRepartitionData(boolean ctas)
+    {
+        Session sessionRepartitionSmall = Session.builder(getSession())
+                .setSystemProperty(PREFERRED_WRITE_PARTITIONING_MIN_NUMBER_OF_PARTITIONS, "2")
+                .build();
+        Session sessionRepartitionMany = Session.builder(getSession())
+                .setSystemProperty(PREFERRED_WRITE_PARTITIONING_MIN_NUMBER_OF_PARTITIONS, "5")
+                .build();
+        // Use DISTINCT to add data redistribution between source table and the writer. This makes it more likely that all writers get some data.
+        String sourceRelation = "(SELECT DISTINCT orderkey, custkey, orderstatus FROM tpch.tiny.orders)";
+        testRepartitionData(
+                sessionRepartitionSmall,
+                sourceRelation,
+                ctas,
+                "'orderstatus'",
+                3);
+        // Test uses relatively small table (60K rows). When engine doesn't redistribute data for writes,
+        // occasionally a worker node doesn't get any data and fewer files get created.
+        assertEventually(() -> {
+            testRepartitionData(
+                    sessionRepartitionMany,
+                    sourceRelation,
+                    ctas,
+                    "'orderstatus'",
+                    9);
+        });
+    }
+
+    private void testRepartitionData(Session session, String sourceRelation, boolean ctas, String partitioning, int expectedFiles)
+    {
+        String tableName = "repartition" +
+                "_" + sourceRelation.replaceAll("[^a-zA-Z0-9]", "") +
+                (ctas ? "ctas" : "insert") +
+                "_" + partitioning.replaceAll("[^a-zA-Z0-9]", "") +
+                "_" + randomTableSuffix();
+
+        long rowCount = (long) computeScalar(session, "SELECT count(*) FROM " + sourceRelation);
+
+        if (ctas) {
+            assertUpdate(
+                    session,
+                    "CREATE TABLE " + tableName + " WITH (partitioning = ARRAY[" + partitioning + "]) " +
+                            "AS SELECT * FROM " + sourceRelation,
+                    rowCount);
+        }
+        else {
+            assertUpdate(
+                    session,
+                    "CREATE TABLE " + tableName + " WITH (partitioning = ARRAY[" + partitioning + "]) " +
+                            "AS SELECT * FROM " + sourceRelation + " WITH NO DATA",
+                    0);
+            // Use source table big enough so that there will be multiple pages being written.
+            assertUpdate(session, "INSERT INTO " + tableName + " SELECT * FROM " + sourceRelation, rowCount);
+        }
+
+        // verify written data
+        assertThat(query(session, "TABLE " + tableName))
+                .skippingTypesCheck()
+                .matches("SELECT * FROM " + sourceRelation);
+
+        // verify data files, i.e. repartitioning took place
+        assertThat(query(session, "SELECT count(*) FROM \"" + tableName + "$files\""))
+                .matches("VALUES BIGINT '" + expectedFiles + "'");
+
+        assertUpdate(session, "DROP TABLE " + tableName);
     }
 
     @Test(dataProvider = "testDataMappingSmokeTestDataProvider")
