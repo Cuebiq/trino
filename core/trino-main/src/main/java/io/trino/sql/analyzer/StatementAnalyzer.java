@@ -3617,6 +3617,12 @@ class StatementAnalyzer
                 throw new TrinoException(INVALID_ROW_FILTER, extractLocation(table), format("Invalid column mask for '%s.%s': %s", tableName, column, e.getErrorMessage()), e);
             }
 
+            Optional<ResolvedField> resolvedField = scope.tryResolveField(expression);
+            if (resolvedField.isPresent()) {
+                String columnName = resolvedField.get().getField().getName().get();
+                accessControl.checkCanSelectFromColumns(session.toSecurityContext(), tableName, Set.of(columnName));
+            }
+
             ExpressionAnalysis expressionAnalysis;
             analysis.registerTableForColumnMasking(tableName, column, currentIdentity);
 
