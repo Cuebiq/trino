@@ -3190,6 +3190,21 @@ class StatementAnalyzer
             }
         }
 
+        private ImmutableList<Field> filterInaccessibleFields(List<Field> fields)
+        {
+            ImmutableList<Field> authorizedFields = fields.stream()
+                    .filter(field ->
+                            field.getOriginColumnName().isEmpty() ||
+                                    field.getOriginTable().isEmpty() ||
+                                    field.isHidden() ||
+                                    !accessControl.filterColumns(
+                                                    session.toSecurityContext(),
+                                                    field.getOriginTable().get().asCatalogSchemaTableName(),
+                                                    Set.of(field.getOriginColumnName().get()))
+                                            .isEmpty()).collect(toImmutableList());
+            return authorizedFields;
+        }
+
         private void analyzeAllColumnsFromTable(
                 List<Field> fields,
                 AllColumns allColumns,
@@ -3247,21 +3262,6 @@ class StatementAnalyzer
             analysis.setSelectAllResultFields(allColumns, itemOutputFieldBuilder.build());
         }
 
-        private ImmutableList<Field> filterInaccessibleFields(List<Field> fields)
-        {
-            ImmutableList<Field> authorizedFields = fields.stream()
-                    .filter(field ->
-                                field.getOriginColumnName().isEmpty() ||
-                                field.getOriginTable().isEmpty() ||
-                                field.isHidden() ||
-                                !accessControl.filterColumns(
-                                                session.toSecurityContext(),
-                                                field.getOriginTable().get().asCatalogSchemaTableName(),
-                                                Set.of(field.getOriginColumnName().get()))
-                                        .isEmpty()).collect(toImmutableList());
-            return authorizedFields;
-        }
-
         private void analyzeAllFieldsFromRowTypeExpression(
                 Expression expression,
                 AllColumns allColumns,
@@ -3312,6 +3312,8 @@ class StatementAnalyzer
                 ImmutableList.Builder<Expression> outputExpressionBuilder,
                 ImmutableList.Builder<SelectExpression> selectExpressionBuilder)
         {
+            checkColumnAccessible(scope, singleColumn);
+
             Expression expression = singleColumn.getExpression();
             ExpressionAnalysis expressionAnalysis = analyzeExpression(expression, scope);
             analysis.recordSubqueries(node, expressionAnalysis);
@@ -3326,6 +3328,24 @@ class StatementAnalyzer
                         type,
                         expression);
             }
+        }
+
+        private SingleColumn checkColumnAccessible(Scope scope, SingleColumn item)
+        {
+            SingleColumn singleColumn = item;
+            Optional<ResolvedField> resolvedField = scope.tryResolveField(singleColumn.getExpression());
+            if (resolvedField.isPresent()) {
+                Field field = resolvedField.get().getField();
+                if (field.getOriginColumnName().isPresent()
+                        && field.getOriginTable().isPresent()
+                        && !field.isHidden()) {
+                    accessControl.checkCanSelectFromColumns(
+                            session.toSecurityContext(),
+                            field.getOriginTable().get(),
+                            Set.of(field.getOriginColumnName().get()));
+                }
+            }
+            return singleColumn;
         }
 
         private void analyzeWhere(Node node, Scope scope, Expression predicate)
