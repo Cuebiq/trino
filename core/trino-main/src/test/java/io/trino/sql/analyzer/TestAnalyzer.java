@@ -4903,12 +4903,15 @@ public class TestAnalyzer
         analyze("SELECT * FROM fresh_materialized_view");
 
         accessControlManager.deny(privilege("fresh_materialized_view.a", SELECT_COLUMN));
+
+        analyze("SELECT * FROM fresh_materialized_view");
+
         assertFails(
                 CLIENT_SESSION,
-                "SELECT * FROM fresh_materialized_view",
+                "SELECT a FROM fresh_materialized_view",
                 accessControlManager)
                 .hasErrorCode(PERMISSION_DENIED)
-                .hasMessage("Access Denied: Cannot select from columns [a, b] in table or view tpch.s1.fresh_materialized_view");
+                .hasMessage("Access Denied: Cannot select from columns [a] in table or view tpch.s1.fresh_materialized_view");
     }
 
     @BeforeClass

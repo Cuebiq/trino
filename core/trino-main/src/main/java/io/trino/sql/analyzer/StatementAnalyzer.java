@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 import io.trino.Session;
+import io.trino.SystemSessionProperties;
 import io.trino.connector.CatalogName;
 import io.trino.execution.Column;
 import io.trino.execution.warnings.WarningCollector;
@@ -3150,7 +3151,7 @@ class StatementAnalyzer
                     }
                     if (identifierChainBasis.get().getBasisType() == TABLE) {
                         RelationType relationType = identifierChainBasis.get().getRelationType().orElseThrow();
-                        List<Field> fields = relationType.resolveVisibleFieldsWithRelationPrefix(Optional.of(prefix));
+                        List<Field> fields = filterInaccessibleFields(relationType.resolveVisibleFieldsWithRelationPrefix(Optional.of(prefix)));
                         if (fields.isEmpty()) {
                             throw semanticException(COLUMN_NOT_FOUND, allColumns, "SELECT * not allowed from relation that has no columns");
                         }
@@ -3176,7 +3177,7 @@ class StatementAnalyzer
                     throw semanticException(NOT_SUPPORTED, allColumns, "Column aliases not supported");
                 }
 
-                List<Field> fields = (List<Field>) scope.getRelationType().getVisibleFields();
+                List<Field> fields = filterInaccessibleFields((List<Field>) scope.getRelationType().getVisibleFields());
                 if (fields.isEmpty()) {
                     if (node.getFrom().isEmpty()) {
                         throw semanticException(COLUMN_NOT_FOUND, allColumns, "SELECT * not allowed in queries without FROM clause");
@@ -3185,6 +3186,26 @@ class StatementAnalyzer
                 }
 
                 analyzeAllColumnsFromTable(fields, allColumns, node, scope, outputExpressionBuilder, selectExpressionBuilder, scope.getRelationType(), true);
+            }
+        }
+
+        private ImmutableList<Field> filterInaccessibleFields(List<Field> fields)
+        {
+            if (SystemSessionProperties.isHideInaccesibleColumns(session)) {
+                ImmutableList<Field> authorizedFields = fields.stream()
+                        .filter(field ->
+                                field.getOriginColumnName().isEmpty() ||
+                                        field.getOriginTable().isEmpty() ||
+                                        field.isHidden() ||
+                                        !accessControl.filterColumns(
+                                                        session.toSecurityContext(),
+                                                        field.getOriginTable().get().asCatalogSchemaTableName(),
+                                                        Set.of(field.getOriginColumnName().get()))
+                                                .isEmpty()).collect(toImmutableList());
+                return authorizedFields;
+            }
+            else {
+                return ImmutableList.copyOf(fields);
             }
         }
 

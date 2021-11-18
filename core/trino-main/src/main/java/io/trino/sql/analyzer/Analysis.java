@@ -882,7 +882,12 @@ public class Analysis
         AccessControlInfo accessControlInfo = new AccessControlInfo(accessControl, identity);
         Map<QualifiedObjectName, Set<String>> references = tableColumnReferences.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>());
         tableColumnMap.asMap()
-                .forEach((key, value) -> references.computeIfAbsent(key, k -> new HashSet<>()).addAll(value));
+                .forEach((key, value) -> {
+                    //Allow to create a rowfilter on a not accessibile column
+                    if (!hasRowFilter(key, identity.getUser())) {
+                        references.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
+                    }
+                });
     }
 
     public void addEmptyColumnReferencesForTable(AccessControl accessControl, Identity identity, QualifiedObjectName table)

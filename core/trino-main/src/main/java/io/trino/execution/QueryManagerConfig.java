@@ -68,6 +68,8 @@ public class QueryManagerConfig
     private int requiredWorkers = 1;
     private Duration requiredWorkersMaxWait = new Duration(5, TimeUnit.MINUTES);
 
+    private boolean hideUnaccessibleColumns;
+
     @Min(1)
     public int getScheduleSplitBatchSize()
     {
@@ -348,6 +350,18 @@ public class QueryManagerConfig
     public QueryManagerConfig setQueryExecutionPolicy(String queryExecutionPolicy)
     {
         this.queryExecutionPolicy = queryExecutionPolicy;
+        return this;
+    }
+
+    public boolean isHideUnaccessibleColumns()
+    {
+        return hideUnaccessibleColumns;
+    }
+
+    @Config("query.hide-inaccessible-columns")
+    public QueryManagerConfig setHideUnaccessibleColumns(boolean hideUnaccessibleColumns)
+    {
+        this.hideUnaccessibleColumns = hideUnaccessibleColumns;
         return this;
     }
 
