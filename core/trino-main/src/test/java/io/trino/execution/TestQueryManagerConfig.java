@@ -39,6 +39,7 @@ public class TestQueryManagerConfig
                 .setMaxQueryHistory(100)
                 .setMaxQueryLength(1_000_000)
                 .setMaxStageCount(100)
+                .setHideUnaccessibleColumns(false)
                 .setStageCountWarningThreshold(50)
                 .setClientTimeout(new Duration(5, MINUTES))
                 .setScheduleSplitBatchSize(1000)
@@ -85,6 +86,7 @@ public class TestQueryManagerConfig
                 .put("query.max-planning-time", "1h")
                 .put("query.max-cpu-time", "2d")
                 .put("query.max-scan-physical-bytes", "1kB")
+                .put("query.hide-inaccessible-columns", "true")
                 .put("query-manager.required-workers", "333")
                 .put("query-manager.required-workers-max-wait", "33m")
                 .build();
@@ -94,6 +96,7 @@ public class TestQueryManagerConfig
                 .setMaxQueryHistory(10)
                 .setMaxQueryLength(10000)
                 .setMaxStageCount(12345)
+                .setHideUnaccessibleColumns(true)
                 .setStageCountWarningThreshold(12300)
                 .setClientTimeout(new Duration(10, SECONDS))
                 .setScheduleSplitBatchSize(99)
