@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 import io.trino.Session;
+import io.trino.SystemSessionProperties;
 import io.trino.connector.CatalogName;
 import io.trino.execution.Column;
 import io.trino.execution.warnings.WarningCollector;
@@ -3192,17 +3193,22 @@ class StatementAnalyzer
 
         private ImmutableList<Field> filterInaccessibleFields(List<Field> fields)
         {
-            ImmutableList<Field> authorizedFields = fields.stream()
-                    .filter(field ->
-                            field.getOriginColumnName().isEmpty() ||
-                                    field.getOriginTable().isEmpty() ||
-                                    field.isHidden() ||
-                                    !accessControl.filterColumns(
-                                                    session.toSecurityContext(),
-                                                    field.getOriginTable().get().asCatalogSchemaTableName(),
-                                                    Set.of(field.getOriginColumnName().get()))
-                                            .isEmpty()).collect(toImmutableList());
-            return authorizedFields;
+            if (SystemSessionProperties.isHideInaccesibleColumns(session)) {
+                ImmutableList<Field> authorizedFields = fields.stream()
+                        .filter(field ->
+                                field.getOriginColumnName().isEmpty() ||
+                                        field.getOriginTable().isEmpty() ||
+                                        field.isHidden() ||
+                                        !accessControl.filterColumns(
+                                                        session.toSecurityContext(),
+                                                        field.getOriginTable().get().asCatalogSchemaTableName(),
+                                                        Set.of(field.getOriginColumnName().get()))
+                                                .isEmpty()).collect(toImmutableList());
+                return authorizedFields;
+            }
+            else {
+                return ImmutableList.copyOf(fields);
+            }
         }
 
         private void analyzeAllColumnsFromTable(
@@ -3327,8 +3333,6 @@ class StatementAnalyzer
                         expression);
             }
         }
-
-
 
         private void analyzeWhere(Node node, Scope scope, Expression predicate)
         {

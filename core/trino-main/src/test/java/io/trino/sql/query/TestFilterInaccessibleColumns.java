@@ -44,6 +44,7 @@ public class TestFilterInaccessibleColumns
             .setCatalog(CATALOG)
             .setSchema(TINY_SCHEMA_NAME)
             .setIdentity(Identity.forUser(USER).build())
+            .setSystemProperty("query_hide_inaccessible_columns", "true")
             .build();
 
     private QueryAssertions assertions;

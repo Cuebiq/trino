@@ -16,6 +16,7 @@ package io.trino.sql.analyzer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import io.trino.Session;
+import io.trino.SystemSessionProperties;
 import io.trino.cost.StatsCalculator;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
@@ -105,15 +106,14 @@ public class Analyzer
         return analysis;
     }
 
-
     private void checkColumnsAccess(Analysis.AccessControlInfo accessControlInfo, QualifiedObjectName tableName, Set<String> columns)
     {
         SecurityContext securityContext = accessControlInfo.getSecurityContext(session.getRequiredTransactionId(), session.getQueryId());
 
         Set<String> accessibleColumns = accessControlInfo.getAccessControl().filterColumns(securityContext, tableName.asCatalogSchemaTableName(), columns);
         Set<String> notAccessibleColumns = columns.stream().filter(input -> !accessibleColumns.contains(input)).collect(Collectors.toSet());
-        if (! notAccessibleColumns.isEmpty())
-        {
+
+        if (SystemSessionProperties.isHideInaccesibleColumns(session) && !notAccessibleColumns.isEmpty()) {
             throw new TrinoException(COLUMN_NOT_FOUND, MessageFormat.format("Columns {0} cannot be resolved", notAccessibleColumns));
         }
 

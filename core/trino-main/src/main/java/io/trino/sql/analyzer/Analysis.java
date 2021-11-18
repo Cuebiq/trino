@@ -883,6 +883,7 @@ public class Analysis
         Map<QualifiedObjectName, Set<String>> references = tableColumnReferences.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>());
         tableColumnMap.asMap()
                 .forEach((key, value) -> {
+                    //Allow to create a rowfilter on a not accessibile column
                     if (!hasRowFilter(key, identity.getUser())) {
                         references.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
                     }
