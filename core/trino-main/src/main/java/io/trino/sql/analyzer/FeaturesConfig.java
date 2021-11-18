@@ -138,6 +138,8 @@ public class FeaturesConfig
     private int filterAndProjectMinOutputPageRowCount = 256;
     private int maxGroupingSets = 2048;
 
+    private boolean hideInaccesibleColumns;
+
     public enum JoinReorderingStrategy
     {
         NONE,
@@ -1047,6 +1049,19 @@ public class FeaturesConfig
     public FeaturesConfig setTableScanNodePartitioningMinBucketToTaskRatio(double tableScanNodePartitioningMinBucketToTaskRatio)
     {
         this.tableScanNodePartitioningMinBucketToTaskRatio = tableScanNodePartitioningMinBucketToTaskRatio;
+        return this;
+    }
+
+    public boolean isHideInaccesibleColumns()
+    {
+        return hideInaccesibleColumns;
+    }
+
+    @Config("hide-inaccessible-columns")
+    @ConfigDescription("When enabled non-accessible columns are silently filtered from results from SELECT * statements")
+    public FeaturesConfig setHideInaccesibleColumns(boolean hideInaccesibleColumns)
+    {
+        this.hideInaccesibleColumns = hideInaccesibleColumns;
         return this;
     }
 }

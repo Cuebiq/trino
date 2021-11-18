@@ -135,6 +135,7 @@ public final class SystemSessionProperties
     public static final String OMIT_DATETIME_TYPE_PRECISION = "omit_datetime_type_precision";
     public static final String USE_LEGACY_WINDOW_FILTER_PUSHDOWN = "use_legacy_window_filter_pushdown";
     public static final String MAX_UNACKNOWLEDGED_SPLITS_PER_TASK = "max_unacknowledged_splits_per_task";
+    public static final String HIDE_INACCESSIBLE_COLUMNS = "hide_inaccessible_columns";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -615,7 +616,13 @@ public final class SystemSessionProperties
                         nodeSchedulerConfig.getMaxUnacknowledgedSplitsPerTask(),
                         false,
                         value -> validateIntegerValue(value, MAX_UNACKNOWLEDGED_SPLITS_PER_TASK, 1, false),
-                        object -> object));
+                        object -> object),
+                booleanProperty(
+                        HIDE_INACCESSIBLE_COLUMNS,
+                        "When enabled non-accessible columns are silently filtered from results from SELECT * statements",
+                        featuresConfig.isHideInaccesibleColumns(),
+                        value -> validateHideInaccesibleColumns(value, featuresConfig.isHideInaccesibleColumns()),
+                        false));
     }
 
     public List<PropertyMetadata<?>> getSessionProperties()
@@ -937,6 +944,13 @@ public final class SystemSessionProperties
         return session.getSystemProperty(MAX_GROUPING_SETS, Integer.class);
     }
 
+    private static void validateHideInaccesibleColumns(boolean value, boolean defaultValue)
+    {
+        if (defaultValue == true && value == false) {
+            throw new TrinoException(INVALID_SESSION_PROPERTY, format("%s cannot be disabled with session property when it was enabled with configuration", HIDE_INACCESSIBLE_COLUMNS));
+        }
+    }
+
     public static OptionalInt getMaxDriversPerTask(Session session)
     {
         Integer value = session.getSystemProperty(MAX_DRIVERS_PER_TASK, Integer.class);
@@ -1096,5 +1110,10 @@ public final class SystemSessionProperties
     public static int getMaxUnacknowledgedSplitsPerTask(Session session)
     {
         return session.getSystemProperty(MAX_UNACKNOWLEDGED_SPLITS_PER_TASK, Integer.class);
+    }
+
+    public static boolean isHideInaccesibleColumns(Session session)
+    {
+        return session.getSystemProperty(HIDE_INACCESSIBLE_COLUMNS, Boolean.class);
     }
 }
