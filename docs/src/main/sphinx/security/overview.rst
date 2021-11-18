@@ -124,6 +124,19 @@ In addition, Trino :doc:`provides an API </develop/system-access-control>` that
 allows you to create a custom access control method, or to extend an existing
 one.
 
+The access control can limit access to columns of a table: the default behaviour
+in case that  a ``SELECT *`` statement tries to access an inaccessible column is
+to throw an ``AccessDeniedException``.
+
+You can set the config parameter:
+
+.. code-block:: properties
+
+    hide_inaccessible_columns = true
+
+for filtering inaccessible columns instead throwing an exception.
+
+
 .. _security-inside-cluster:
 
 Securing inside the cluster

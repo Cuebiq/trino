@@ -143,6 +143,7 @@ public final class SystemSessionProperties
     public static final String LEGACY_CATALOG_ROLES = "legacy_catalog_roles";
     public static final String INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED = "incremental_hash_array_load_factor_enabled";
     public static final String MAX_PARTIAL_TOP_N_MEMORY = "max_partial_top_n_memory";
+    public static final String HIDE_INACCESSIBLE_COLUMNS = "hide_inaccessible_columns";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -665,6 +666,12 @@ public final class SystemSessionProperties
                         MAX_PARTIAL_TOP_N_MEMORY,
                         "Max memory size for partial Top N aggregations. This can be turned off by setting it with '0'.",
                         taskManagerConfig.getMaxPartialTopNMemory(),
+                        false),
+                booleanProperty(
+                        HIDE_INACCESSIBLE_COLUMNS,
+                        "When enabled non accessible columns will be filtered from SELECT * statement",
+                        featuresConfig.isHideInaccesibleColumns(),
+                        value -> validateHideInaccesibleColumns(value, featuresConfig.isHideInaccesibleColumns()),
                         false));
     }
 
@@ -998,6 +1005,13 @@ public final class SystemSessionProperties
         return session.getSystemProperty(MAX_GROUPING_SETS, Integer.class);
     }
 
+    private static void validateHideInaccesibleColumns(boolean value, boolean defaultValue)
+    {
+        if (defaultValue == true && value == false) {
+            throw new TrinoException(INVALID_SESSION_PROPERTY, format("%s cannot be disabled with session property when it was enabled with configuration", HIDE_INACCESSIBLE_COLUMNS));
+        }
+    }
+
     public static OptionalInt getMaxDriversPerTask(Session session)
     {
         Integer value = session.getSystemProperty(MAX_DRIVERS_PER_TASK, Integer.class);
@@ -1182,5 +1196,10 @@ public final class SystemSessionProperties
     public static DataSize getMaxPartialTopNMemory(Session session)
     {
         return session.getSystemProperty(MAX_PARTIAL_TOP_N_MEMORY, DataSize.class);
+    }
+
+    public static boolean isHideInaccesibleColumns(Session session)
+    {
+        return session.getSystemProperty(HIDE_INACCESSIBLE_COLUMNS, Boolean.class);
     }
 }
