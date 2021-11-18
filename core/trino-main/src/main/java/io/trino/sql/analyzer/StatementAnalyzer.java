@@ -3312,8 +3312,6 @@ class StatementAnalyzer
                 ImmutableList.Builder<Expression> outputExpressionBuilder,
                 ImmutableList.Builder<SelectExpression> selectExpressionBuilder)
         {
-            checkColumnAccessible(scope, singleColumn);
-
             Expression expression = singleColumn.getExpression();
             ExpressionAnalysis expressionAnalysis = analyzeExpression(expression, scope);
             analysis.recordSubqueries(node, expressionAnalysis);
@@ -3330,23 +3328,7 @@ class StatementAnalyzer
             }
         }
 
-        private SingleColumn checkColumnAccessible(Scope scope, SingleColumn item)
-        {
-            SingleColumn singleColumn = item;
-            Optional<ResolvedField> resolvedField = scope.tryResolveField(singleColumn.getExpression());
-            if (resolvedField.isPresent()) {
-                Field field = resolvedField.get().getField();
-                if (field.getOriginColumnName().isPresent()
-                        && field.getOriginTable().isPresent()
-                        && !field.isHidden()) {
-                    accessControl.checkCanSelectFromColumns(
-                            session.toSecurityContext(),
-                            field.getOriginTable().get(),
-                            Set.of(field.getOriginColumnName().get()));
-                }
-            }
-            return singleColumn;
-        }
+
 
         private void analyzeWhere(Node node, Scope scope, Expression predicate)
         {
@@ -3615,12 +3597,6 @@ class StatementAnalyzer
             }
             catch (ParsingException e) {
                 throw new TrinoException(INVALID_ROW_FILTER, extractLocation(table), format("Invalid column mask for '%s.%s': %s", tableName, column, e.getErrorMessage()), e);
-            }
-
-            Optional<ResolvedField> resolvedField = scope.tryResolveField(expression);
-            if (resolvedField.isPresent()) {
-                String columnName = resolvedField.get().getField().getName().get();
-                accessControl.checkCanSelectFromColumns(session.toSecurityContext(), tableName, Set.of(columnName));
             }
 
             ExpressionAnalysis expressionAnalysis;

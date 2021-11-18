@@ -19,7 +19,10 @@ import io.trino.Session;
 import io.trino.cost.StatsCalculator;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
+import io.trino.metadata.QualifiedObjectName;
 import io.trino.security.AccessControl;
+import io.trino.security.SecurityContext;
+import io.trino.spi.TrinoException;
 import io.trino.spi.security.GroupProvider;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.rewrite.StatementRewrite;
@@ -30,10 +33,14 @@ import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Parameter;
 import io.trino.sql.tree.Statement;
 
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import static io.trino.spi.StandardErrorCode.COLUMN_NOT_FOUND;
 import static io.trino.spi.StandardErrorCode.EXPRESSION_NOT_SCALAR;
 import static io.trino.sql.analyzer.ExpressionTreeUtils.extractAggregateFunctions;
 import static io.trino.sql.analyzer.ExpressionTreeUtils.extractExpressions;
@@ -91,7 +98,29 @@ public class Analyzer
         StatementAnalyzer analyzer = new StatementAnalyzer(analysis, metadata, sqlParser, groupProvider, accessControl, session, warningCollector, CorrelationSupport.ALLOWED);
         analyzer.analyze(rewrittenStatement, Optional.empty());
 
+        // check column access permissions for each table
+        analysis.getTableColumnReferences().forEach((accessControlInfo, tableColumnReferences) ->
+                tableColumnReferences.forEach((tableName, columns) ->
+                        checkColumnsAccess(accessControlInfo, tableName, columns)));
         return analysis;
+    }
+
+
+    private void checkColumnsAccess(Analysis.AccessControlInfo accessControlInfo, QualifiedObjectName tableName, Set<String> columns)
+    {
+        SecurityContext securityContext = accessControlInfo.getSecurityContext(session.getRequiredTransactionId(), session.getQueryId());
+
+        Set<String> accessibleColumns = accessControlInfo.getAccessControl().filterColumns(securityContext, tableName.asCatalogSchemaTableName(), columns);
+        Set<String> notAccessibleColumns = columns.stream().filter(input -> !accessibleColumns.contains(input)).collect(Collectors.toSet());
+        if (! notAccessibleColumns.isEmpty())
+        {
+            throw new TrinoException(COLUMN_NOT_FOUND, MessageFormat.format("Columns {0} cannot be resolved", notAccessibleColumns));
+        }
+
+        accessControlInfo.getAccessControl().checkCanSelectFromColumns(
+                securityContext,
+                tableName,
+                columns);
     }
 
     static void verifyNoAggregateWindowOrGroupingFunctions(Metadata metadata, Expression predicate, String clause)

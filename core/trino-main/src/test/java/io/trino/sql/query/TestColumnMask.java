@@ -601,7 +601,7 @@ public class TestColumnMask
                 USER,
                 new ViewExpression(USER, Optional.empty(), Optional.empty(), "custkey"));
         assertThatThrownBy(() -> assertions.query("SELECT orderkey FROM orders"))
-                .hasMessage("Access Denied: Cannot select from columns [custkey] in table or view local.tiny.orders");
+                .hasMessage("Access Denied: Cannot select from columns [orderkey, custkey] in table or view local.tiny.orders");
     }
 
     @Test
