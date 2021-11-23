@@ -144,6 +144,7 @@ public final class SystemSessionProperties
     public static final String MERGE_PROJECT_WITH_VALUES = "merge_project_with_values";
     public static final String TIME_ZONE_ID = "time_zone_id";
     public static final String LEGACY_CATALOG_ROLES = "legacy_catalog_roles";
+    public static final String INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED = "incremental_hash_array_load_factor_enabled";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -664,7 +665,11 @@ public final class SystemSessionProperties
                         true),
                 booleanProperty(QUERY_HIDE_INACCESSIBLE_COLUMNS,
                         "Hide inaccesible columns in queries so that 'Select *' statement can be used",
-                        queryManagerConfig.isHideUnaccessibleColumns(),
+                        queryManagerConfig.isHideUnaccessibleColumns(),false),
+                booleanProperty(
+                        INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED,
+                        "Use smaller load factor for small hash arrays in order to improve performance",
+                        featuresConfig.isIncrementalHashArrayLoadFactorEnabled(),
                         false));
     }
 
@@ -1182,5 +1187,11 @@ public final class SystemSessionProperties
     public static boolean isHideInaccesibleColumns(Session session)
     {
         return session.getSystemProperty(QUERY_HIDE_INACCESSIBLE_COLUMNS, Boolean.class);
+    }
+
+    public static boolean isIncrementalHashArrayLoadFactorEnabled(Session session)
+    {
+        return session.getSystemProperty(INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED, Boolean.class);
+
     }
 }
