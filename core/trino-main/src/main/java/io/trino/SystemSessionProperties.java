@@ -665,7 +665,7 @@ public final class SystemSessionProperties
                         true),
                 booleanProperty(QUERY_HIDE_INACCESSIBLE_COLUMNS,
                         "Hide inaccesible columns in queries so that 'Select *' statement can be used",
-                        queryManagerConfig.isHideUnaccessibleColumns(),false),
+                        queryManagerConfig.isHideUnaccessibleColumns(), false),
                 booleanProperty(
                         INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED,
                         "Use smaller load factor for small hash arrays in order to improve performance",
@@ -1192,6 +1192,5 @@ public final class SystemSessionProperties
     public static boolean isIncrementalHashArrayLoadFactorEnabled(Session session)
     {
         return session.getSystemProperty(INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED, Boolean.class);
-
     }
 }
