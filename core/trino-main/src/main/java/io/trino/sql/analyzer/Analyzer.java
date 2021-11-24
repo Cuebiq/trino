@@ -100,7 +100,7 @@ public class Analyzer
         analyzer.analyze(rewrittenStatement, Optional.empty());
 
         // check column access permissions for each table
-        analysis.getTableColumnReferences().forEach((accessControlInfo, tableColumnReferences) ->
+        analysis.getTableColumnReferencesWithoutRowFilter().forEach((accessControlInfo, tableColumnReferences) ->
                 tableColumnReferences.forEach((tableName, columns) ->
                         checkColumnsAccess(accessControlInfo, tableName, columns)));
         return analysis;

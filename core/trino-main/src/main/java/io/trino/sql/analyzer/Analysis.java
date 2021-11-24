@@ -133,6 +133,9 @@ public class Analysis
     // a map of users to the columns per table that they access
     private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferences = new LinkedHashMap<>();
 
+    // a map of users to the columns per table that they access excluding row filter
+    private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferencesWithoutRowFilter = new LinkedHashMap<>();
+
     // Record fields prefixed with labels in row pattern recognition context
     private final Map<NodeRef<DereferenceExpression>, LabelPrefixedReference> labelDereferences = new LinkedHashMap<>();
 
@@ -881,12 +884,14 @@ public class Analysis
     {
         AccessControlInfo accessControlInfo = new AccessControlInfo(accessControl, identity);
         Map<QualifiedObjectName, Set<String>> references = tableColumnReferences.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>());
+        Map<QualifiedObjectName, Set<String>> referencesWithoutRowFilters = tableColumnReferencesWithoutRowFilter.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>());
         tableColumnMap.asMap()
                 .forEach((key, value) -> {
                     //Allow to create a rowfilter on a not accessibile column
                     if (!hasRowFilter(key, identity.getUser())) {
-                        references.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
+                        referencesWithoutRowFilters.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
                     }
+                    references.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
                 });
     }
 
@@ -958,6 +963,11 @@ public class Analysis
     public Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> getTableColumnReferences()
     {
         return tableColumnReferences;
+    }
+
+    public Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> getTableColumnReferencesWithoutRowFilter()
+    {
+        return tableColumnReferencesWithoutRowFilter;
     }
 
     public void markRedundantOrderBy(OrderBy orderBy)
