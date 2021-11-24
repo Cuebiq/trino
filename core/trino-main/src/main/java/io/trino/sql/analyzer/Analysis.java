@@ -136,9 +136,6 @@ public class Analysis
     // a map of users to the columns per table that they access in row filter
     private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferencesInRowFilter = new LinkedHashMap<>();
 
-    // a map of users to the columns per table that they access excluding row filter
-    private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferencesWithoutRowFilter = new LinkedHashMap<>();
-
     // Record fields prefixed with labels in row pattern recognition context
     private final Map<NodeRef<DereferenceExpression>, LabelPrefixedReference> labelDereferences = new LinkedHashMap<>();
 
