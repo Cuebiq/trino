@@ -100,7 +100,7 @@ public class Analyzer
         analyzer.analyze(rewrittenStatement, Optional.empty());
 
         // check column access permissions for each table
-        analysis.getTableColumnReferencesWithoutRowFilter().forEach((accessControlInfo, tableColumnReferences) ->
+        analysis.getTableColumnReferencesInStatements().forEach((accessControlInfo, tableColumnReferences) ->
                 tableColumnReferences.forEach((tableName, columns) ->
                         checkColumnsAccess(accessControlInfo, tableName, columns)));
         return analysis;
@@ -110,11 +110,12 @@ public class Analyzer
     {
         SecurityContext securityContext = accessControlInfo.getSecurityContext(session.getRequiredTransactionId(), session.getQueryId());
 
-        Set<String> accessibleColumns = accessControlInfo.getAccessControl().filterColumns(securityContext, tableName.asCatalogSchemaTableName(), columns);
-        Set<String> notAccessibleColumns = columns.stream().filter(input -> !accessibleColumns.contains(input)).collect(Collectors.toSet());
-
-        if (SystemSessionProperties.isHideInaccesibleColumns(session) && !notAccessibleColumns.isEmpty()) {
-            throw new TrinoException(COLUMN_NOT_FOUND, MessageFormat.format("Columns {0} cannot be resolved", notAccessibleColumns));
+        if (SystemSessionProperties.isHideInaccesibleColumns(session)) {
+            Set<String> accessibleColumns = accessControlInfo.getAccessControl().filterColumns(securityContext, tableName.asCatalogSchemaTableName(), columns);
+            Set<String> notAccessibleColumns = columns.stream().filter(input -> !accessibleColumns.contains(input)).collect(Collectors.toSet());
+            if (!notAccessibleColumns.isEmpty()) {
+                throw new TrinoException(COLUMN_NOT_FOUND, MessageFormat.format("Columns {0} cannot be resolved", notAccessibleColumns));
+            }
         }
 
         accessControlInfo.getAccessControl().checkCanSelectFromColumns(

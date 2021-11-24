@@ -131,7 +131,10 @@ public class Analysis
     private final Map<NodeRef<Expression>, ResolvedField> columnReferences = new LinkedHashMap<>();
 
     // a map of users to the columns per table that they access
-    private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferences = new LinkedHashMap<>();
+    private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferencesInStatements = new LinkedHashMap<>();
+
+    // a map of users to the columns per table that they access in row filter
+    private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferencesInRowFilter = new LinkedHashMap<>();
 
     // a map of users to the columns per table that they access excluding row filter
     private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferencesWithoutRowFilter = new LinkedHashMap<>();
@@ -883,22 +886,24 @@ public class Analysis
     public void addTableColumnReferences(AccessControl accessControl, Identity identity, Multimap<QualifiedObjectName, String> tableColumnMap)
     {
         AccessControlInfo accessControlInfo = new AccessControlInfo(accessControl, identity);
-        Map<QualifiedObjectName, Set<String>> references = tableColumnReferences.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>());
-        Map<QualifiedObjectName, Set<String>> referencesWithoutRowFilters = tableColumnReferencesWithoutRowFilter.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>());
+        Map<QualifiedObjectName, Set<String>> referencesInStatement = tableColumnReferencesInStatements.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>());
+        Map<QualifiedObjectName, Set<String>> rowFilterReferences = tableColumnReferencesInRowFilter.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>());
         tableColumnMap.asMap()
                 .forEach((key, value) -> {
                     //Allow to create a rowfilter on a not accessibile column
-                    if (!hasRowFilter(key, identity.getUser())) {
-                        referencesWithoutRowFilters.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
+                    if (hasRowFilter(key, identity.getUser())) {
+                        rowFilterReferences.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
                     }
-                    references.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
+                    else {
+                        referencesInStatement.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
+                    }
                 });
     }
 
     public void addEmptyColumnReferencesForTable(AccessControl accessControl, Identity identity, QualifiedObjectName table)
     {
         AccessControlInfo accessControlInfo = new AccessControlInfo(accessControl, identity);
-        tableColumnReferences.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>()).computeIfAbsent(table, k -> new HashSet<>());
+        tableColumnReferencesInStatements.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>()).computeIfAbsent(table, k -> new HashSet<>());
     }
 
     public void addLabelDereferences(Map<NodeRef<DereferenceExpression>, LabelPrefixedReference> dereferences)
@@ -960,14 +965,37 @@ public class Analysis
         return measureDefinitions.get(NodeRef.of(measure));
     }
 
+    private void addTableColumnReferencesToMap(Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> referenceMap, AccessControlInfo accessControlInfo, Map<QualifiedObjectName, Set<String>> tableColumnMap)
+    {
+        Map<QualifiedObjectName, Set<String>> references = referenceMap.computeIfAbsent(accessControlInfo, k -> new LinkedHashMap<>());
+        tableColumnMap
+                .forEach((key, value) -> {
+                    references.computeIfAbsent(key, k -> new HashSet<>()).addAll(value);
+                });
+    }
+
     public Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> getTableColumnReferences()
     {
+        Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferences = new LinkedHashMap<>();
+        tableColumnReferencesInStatements.forEach(
+                (accessControlInfo, qualifiedObjectNameSetMap) ->
+                        addTableColumnReferencesToMap(tableColumnReferences, accessControlInfo, qualifiedObjectNameSetMap));
+
+        tableColumnReferencesInRowFilter.forEach(
+                (accessControlInfo, qualifiedObjectNameSetMap) ->
+                        addTableColumnReferencesToMap(tableColumnReferences, accessControlInfo, qualifiedObjectNameSetMap));
+
         return tableColumnReferences;
     }
 
-    public Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> getTableColumnReferencesWithoutRowFilter()
+    public Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> getTableColumnReferencesInStatements()
     {
-        return tableColumnReferencesWithoutRowFilter;
+        return tableColumnReferencesInStatements;
+    }
+
+    public Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> getTableColumnReferencesInRowFilter()
+    {
+        return tableColumnReferencesInRowFilter;
     }
 
     public void markRedundantOrderBy(OrderBy orderBy)
@@ -1040,7 +1068,7 @@ public class Analysis
                     NodeRef<Table> table = entry.getKey();
 
                     QualifiedObjectName tableName = entry.getValue().getName();
-                    List<ColumnInfo> columns = tableColumnReferences.values().stream()
+                    List<ColumnInfo> columns = getTableColumnReferences().values().stream()
                             .map(tablesToColumns -> tablesToColumns.get(tableName))
                             .filter(Objects::nonNull)
                             .flatMap(Collection::stream)
