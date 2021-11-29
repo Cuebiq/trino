@@ -2539,8 +2539,8 @@ public class HiveMetadata
         if (isQueryPartitionFilterRequiredForTable(session, handle.getSchemaTableName()) && handle.getAnalyzePartitionValues().isEmpty() && handle.getEnforcedConstraint().isAll()) {
             List<HiveColumnHandle> partitionColumns = handle.getPartitionColumns();
             if (!partitionColumns.isEmpty()) {
-                Optional<Set<ColumnHandle>> referencedColumns = handle.getConstraintColumns();
-                if (referencedColumns.isEmpty() || Collections.disjoint(referencedColumns.get(), partitionColumns)) {
+                Set<ColumnHandle> referencedColumns = handle.getConstraintColumns();
+                if (Collections.disjoint(referencedColumns, partitionColumns)) {
                     String partitionColumnNames = partitionColumns.stream()
                             .map(HiveColumnHandle::getName)
                             .collect(joining(", "));
@@ -2576,8 +2576,7 @@ public class HiveMetadata
         // all references are simple variables
         if (columnProjections.values().stream().allMatch(ProjectedColumnRepresentation::isVariable)) {
             Set<ColumnHandle> projectedColumns = ImmutableSet.copyOf(assignments.values());
-            if (hiveTableHandle.getProjectedColumns().isPresent()
-                    && hiveTableHandle.getProjectedColumns().get().equals(projectedColumns)) {
+            if (hiveTableHandle.getProjectedColumns().equals(projectedColumns)) {
                 return Optional.empty();
             }
             List<Assignment> assignmentsList = assignments.entrySet().stream()
@@ -2776,8 +2775,8 @@ public class HiveMetadata
                 hiveTable.getBucketFilter(),
                 hiveTable.getAnalyzePartitionValues(),
                 hiveTable.getAnalyzeColumnNames(),
-                Optional.empty(),
-                Optional.empty(), // Projected columns is used only during optimization phase of planning
+                ImmutableSet.of(),
+                ImmutableSet.of(), // Projected columns is used only during optimization phase of planning
                 hiveTable.getTransaction(),
                 hiveTable.isRecordScannedFiles(),
                 hiveTable.getMaxScannedFileSize());

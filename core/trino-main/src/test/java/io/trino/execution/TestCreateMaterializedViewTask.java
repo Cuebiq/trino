@@ -16,9 +16,9 @@ package io.trino.execution;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import io.trino.Session;
 import io.trino.connector.CatalogName;
-import io.trino.cost.StatsCalculator;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.AbstractMockMetadata;
 import io.trino.metadata.Catalog;
@@ -43,8 +43,10 @@ import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.TestingColumnHandle;
 import io.trino.spi.resourcegroups.ResourceGroupId;
 import io.trino.spi.security.AccessDeniedException;
+import io.trino.sql.analyzer.AnalyzerFactory;
 import io.trino.sql.parser.SqlParser;
 import io.trino.sql.planner.TestingConnectorTransactionHandle;
+import io.trino.sql.rewrite.StatementRewrite;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.CreateMaterializedView;
 import io.trino.sql.tree.Identifier;
@@ -67,7 +69,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.airlift.concurrent.MoreFutures.getFutureValue;
-import static io.trino.cost.StatsCalculator.noopStatsCalculator;
 import static io.trino.metadata.MetadataManager.createTestMetadataManager;
 import static io.trino.spi.StandardErrorCode.ALREADY_EXISTS;
 import static io.trino.spi.StandardErrorCode.INVALID_MATERIALIZED_VIEW_PROPERTY;
@@ -101,8 +102,8 @@ public class TestCreateMaterializedViewTask
     private MockMetadata metadata;
     private TransactionManager transactionManager;
     private SqlParser parser;
-    private StatsCalculator statsCalculator;
     private QueryStateMachine queryStateMachine;
+    private AnalyzerFactory analyzerFactory;
 
     @BeforeMethod
     public void setUp()
@@ -127,7 +128,7 @@ public class TestCreateMaterializedViewTask
                 materializedViewPropertyManager,
                 testCatalog.getConnectorCatalogName());
         parser = new SqlParser();
-        statsCalculator = noopStatsCalculator();
+        analyzerFactory = new AnalyzerFactory(metadata, parser, new AllowAllAccessControl(), new TestingGroupProvider(), new StatementRewrite(ImmutableSet.of()));
         queryStateMachine = stateMachine(transactionManager, createTestMetadataManager(), new AllowAllAccessControl());
     }
 
@@ -143,8 +144,8 @@ public class TestCreateMaterializedViewTask
                 ImmutableList.of(),
                 Optional.empty());
 
-        getFutureValue(new CreateMaterializedViewTask(parser, new TestingGroupProvider(), statsCalculator)
-                .execute(statement, transactionManager, metadata, new AllowAllAccessControl(), queryStateMachine, ImmutableList.of(), WarningCollector.NOOP));
+        getFutureValue(new CreateMaterializedViewTask(metadata, new AllowAllAccessControl(), parser, analyzerFactory)
+                .execute(statement, queryStateMachine, ImmutableList.of(), WarningCollector.NOOP));
         assertEquals(metadata.getCreateMaterializedViewCallCount(), 1);
     }
 
@@ -160,8 +161,8 @@ public class TestCreateMaterializedViewTask
                 ImmutableList.of(),
                 Optional.empty());
 
-        assertTrinoExceptionThrownBy(() -> getFutureValue(new CreateMaterializedViewTask(parser, new TestingGroupProvider(), statsCalculator)
-                .execute(statement, transactionManager, metadata, new AllowAllAccessControl(), queryStateMachine, ImmutableList.of(), WarningCollector.NOOP)))
+        assertTrinoExceptionThrownBy(() -> getFutureValue(new CreateMaterializedViewTask(metadata, new AllowAllAccessControl(), parser, analyzerFactory)
+                .execute(statement, queryStateMachine, ImmutableList.of(), WarningCollector.NOOP)))
                 .hasErrorCode(ALREADY_EXISTS)
                 .hasMessage("Materialized view already exists");
 
@@ -180,8 +181,8 @@ public class TestCreateMaterializedViewTask
                 ImmutableList.of(new Property(new Identifier("baz"), new StringLiteral("abc"))),
                 Optional.empty());
 
-        assertTrinoExceptionThrownBy(() -> getFutureValue(new CreateMaterializedViewTask(parser, new TestingGroupProvider(), statsCalculator)
-                .execute(statement, transactionManager, metadata, new AllowAllAccessControl(), queryStateMachine, ImmutableList.of(), WarningCollector.NOOP)))
+        assertTrinoExceptionThrownBy(() -> getFutureValue(new CreateMaterializedViewTask(metadata, new AllowAllAccessControl(), parser, analyzerFactory)
+                .execute(statement, queryStateMachine, ImmutableList.of(), WarningCollector.NOOP)))
                 .hasErrorCode(INVALID_MATERIALIZED_VIEW_PROPERTY)
                 .hasMessage("Catalog 'catalog' does not support materialized view property 'baz'");
 
@@ -203,8 +204,9 @@ public class TestCreateMaterializedViewTask
         accessControl.loadSystemAccessControl(AllowAllSystemAccessControl.NAME, ImmutableMap.of());
         accessControl.deny(privilege("test_mv", CREATE_MATERIALIZED_VIEW));
 
-        assertThatThrownBy(() -> getFutureValue(new CreateMaterializedViewTask(parser, new TestingGroupProvider(), statsCalculator)
-                .execute(statement, transactionManager, metadata, accessControl, queryStateMachine, ImmutableList.of(), WarningCollector.NOOP)))
+        AnalyzerFactory analyzerFactory = new AnalyzerFactory(metadata, parser, accessControl, new TestingGroupProvider(), new StatementRewrite(ImmutableSet.of()));
+        assertThatThrownBy(() -> getFutureValue(new CreateMaterializedViewTask(metadata, accessControl, parser, analyzerFactory)
+                .execute(statement, queryStateMachine, ImmutableList.of(), WarningCollector.NOOP)))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("Cannot create materialized view catalog.schema.test_mv");
     }

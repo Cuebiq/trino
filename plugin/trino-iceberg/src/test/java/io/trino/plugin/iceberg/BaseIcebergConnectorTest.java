@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.units.DataSize;
+import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.metadata.Metadata;
 import io.trino.metadata.QualifiedObjectName;
@@ -34,7 +35,6 @@ import io.trino.spi.predicate.NullableValue;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.statistics.ColumnStatistics;
 import io.trino.spi.statistics.TableStatistics;
-import io.trino.sql.analyzer.FeaturesConfig;
 import io.trino.testing.BaseConnectorTest;
 import io.trino.testing.MaterializedResult;
 import io.trino.testing.MaterializedRow;
@@ -59,6 +59,8 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -2367,11 +2369,41 @@ public abstract class BaseIcebergConnectorTest
     }
 
     @Test
+    public void testFileSizeInManifest()
+            throws Exception
+    {
+        assertUpdate("CREATE TABLE test_file_size_in_manifest (" +
+                "a_bigint bigint, " +
+                "a_varchar varchar, " +
+                "a_long_decimal decimal(38,20), " +
+                "a_map map(varchar, integer))");
+
+        assertUpdate(
+                "INSERT INTO test_file_size_in_manifest VALUES " +
+                        "(NULL, NULL, NULL, NULL), " +
+                        "(42, 'some varchar value', DECIMAL '123456789123456789.123456789123456789', map(ARRAY['abc', 'def'], ARRAY[113, -237843832]))",
+                2);
+
+        MaterializedResult files = computeActual("SELECT file_path, record_count, file_size_in_bytes FROM \"test_file_size_in_manifest$files\"");
+        long totalRecordCount = 0;
+        for (MaterializedRow row : files.getMaterializedRows()) {
+            String path = (String) row.getField(0);
+            Long recordCount = (Long) row.getField(1);
+            Long fileSizeInBytes = (Long) row.getField(2);
+
+            totalRecordCount += recordCount;
+            assertThat(fileSizeInBytes).isEqualTo(Files.size(Paths.get(path)));
+        }
+        // Verify sum(record_count) to make sure we have all the files.
+        assertThat(totalRecordCount).isEqualTo(2);
+    }
+
+    @Test
     public void testIncorrectIcebergFileSizes()
             throws Exception
     {
         // Create a table with a single insert
-        assertUpdate("CREATE TABLE test_iceberg_file_size (x BIGINT) WITH (format='PARQUET')");
+        assertUpdate("CREATE TABLE test_iceberg_file_size (x BIGINT)");
         assertUpdate("INSERT INTO test_iceberg_file_size VALUES (123), (456), (758)", 3);
 
         // Get manifest file
@@ -2417,7 +2449,10 @@ public abstract class BaseIcebergConnectorTest
         assertQuery(session, "SELECT * FROM test_iceberg_file_size", "VALUES (123), (456), (758)");
 
         // Using Iceberg provided file size fails the query
-        assertQueryFails("SELECT * FROM test_iceberg_file_size", format("Error reading tail from .* with length %d", alteredValue));
+        assertQueryFails("SELECT * FROM test_iceberg_file_size",
+                format == ORC
+                        ? format(".*Error opening Iceberg split.*\\QIncorrect file size (%s) for file (end of stream not reached)\\E.*", alteredValue)
+                        : format("Error reading tail from .* with length %d", alteredValue));
 
         dropTable("test_iceberg_file_size");
     }
