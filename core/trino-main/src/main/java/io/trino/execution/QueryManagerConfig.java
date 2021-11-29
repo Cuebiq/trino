@@ -359,6 +359,7 @@ public class QueryManagerConfig
     }
 
     @Config("query.hide-inaccessible-columns")
+    @ConfigDescription("if true inaccessible columns are filtered in select * statement")
     public QueryManagerConfig setHideUnaccessibleColumns(boolean hideUnaccessibleColumns)
     {
         this.hideUnaccessibleColumns = hideUnaccessibleColumns;

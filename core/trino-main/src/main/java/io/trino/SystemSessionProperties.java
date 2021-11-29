@@ -662,7 +662,8 @@ public final class SystemSessionProperties
                         "Enable legacy role management syntax that assumed all roles are catalog scoped",
                         featuresConfig.isLegacyCatalogRoles(),
                         true),
-                booleanProperty(QUERY_HIDE_INACCESSIBLE_COLUMNS,
+                booleanProperty(
+                        QUERY_HIDE_INACCESSIBLE_COLUMNS,
                         "Hide inaccesible columns in queries so that 'Select *' statement can be used",
                         queryManagerConfig.isHideUnaccessibleColumns(), false),
                 booleanProperty(

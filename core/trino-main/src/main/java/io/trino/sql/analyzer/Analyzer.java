@@ -33,7 +33,6 @@ import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Parameter;
 import io.trino.sql.tree.Statement;
 
-import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -99,7 +98,7 @@ public class Analyzer
         analyzer.analyze(rewrittenStatement, Optional.empty());
 
         // check column access permissions for each table
-        analysis.getTableColumnReferencesInStatements().forEach((accessControlInfo, tableColumnReferences) ->
+        analysis.getTableColumnReferences().forEach((accessControlInfo, tableColumnReferences) ->
                 tableColumnReferences.forEach((tableName, columns) ->
                         checkColumnsAccess(accessControlInfo, tableName, columns)));
         return analysis;
@@ -113,7 +112,7 @@ public class Analyzer
             Set<String> accessibleColumns = accessControlInfo.getAccessControl().filterColumns(securityContext, tableName.asCatalogSchemaTableName(), columns);
             Set<String> notAccessibleColumns = columns.stream().filter(input -> !accessibleColumns.contains(input)).collect(Collectors.toSet());
             if (!notAccessibleColumns.isEmpty()) {
-                throw new TrinoException(COLUMN_NOT_FOUND, MessageFormat.format("Columns {0} cannot be resolved", notAccessibleColumns));
+                throw new TrinoException(COLUMN_NOT_FOUND, String.format("Columns %s cannot be resolved", notAccessibleColumns));
             }
         }
 

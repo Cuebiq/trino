@@ -3189,7 +3189,7 @@ class StatementAnalyzer
             }
         }
 
-        private ImmutableList<Field> filterInaccessibleFields(List<Field> fields)
+        private List<Field> filterInaccessibleFields(List<Field> fields)
         {
             if (SystemSessionProperties.isHideInaccesibleColumns(session)) {
                 ImmutableList<Field> authorizedFields = fields.stream()
