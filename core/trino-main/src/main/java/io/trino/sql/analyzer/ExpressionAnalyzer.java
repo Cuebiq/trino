@@ -2661,7 +2661,6 @@ public class ExpressionAnalyzer
 
     private static void addTableColumnReferences(Analysis analysis, AccessControl accessControl, Identity identity, Multimap<QualifiedObjectName, String> tableColumnMap)
     {
-        Analysis.AccessControlInfo accessControlInfo = new Analysis.AccessControlInfo(accessControl, identity);
         Multimap<QualifiedObjectName, String> referencesInStatement = HashMultimap.create();
         Multimap<QualifiedObjectName, String> rowFilterReferences = HashMultimap.create();
         tableColumnMap.asMap()
