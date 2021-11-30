@@ -155,7 +155,7 @@ public class TestFilterInaccessibleColumns
         accessControl.reset();
         accessControl.deny(privilege("nation.comment", SELECT_COLUMN));
         assertThatThrownBy(() -> assertions.query("SELECT nationkey, name, regionkey, comment FROM nation WHERE name = 'FRANCE'"))
-                .hasMessage("Columns [comment] cannot be resolved");
+                .hasMessage("Access Denied: Cannot select from columns [nationkey, regionkey, name, comment] in table or view local.tiny.nation");
     }
 
     @Test
@@ -165,7 +165,7 @@ public class TestFilterInaccessibleColumns
         accessControl.reset();
         accessControl.deny(privilege("nation.name", SELECT_COLUMN));
         assertThatThrownBy(() -> assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
-                .hasMessage("Columns [name] cannot be resolved");
+                .hasMessage("Access Denied: Cannot select from columns [nationkey, regionkey, name, comment] in table or view local.tiny.nation");
     }
 
     /**
@@ -181,8 +181,8 @@ public class TestFilterInaccessibleColumns
         accessControl.deny(privilege("columns.is_nullable", SELECT_COLUMN));
         accessControl.deny(privilege("columns.data_type", SELECT_COLUMN));
         // SHOW COLUMNS and DESCRIBE fail since data_type isn't visible
-        assertThatThrownBy(() -> assertions.query("SHOW COLUMNS FROM nation")).hasMessage("Columns [ordinal_position, data_type] cannot be resolved");
-        assertThatThrownBy(() -> assertions.query("DESCRIBE nation")).hasMessage("Columns [ordinal_position, data_type] cannot be resolved");
+        assertThatThrownBy(() -> assertions.query("SHOW COLUMNS FROM nation")).hasMessage("Access Denied: Cannot select from columns [ordinal_position, extra_info, table_schema, column_name, data_type, comment, table_name] in table or view local.information_schema.columns");
+        assertThatThrownBy(() -> assertions.query("DESCRIBE nation")).hasMessage("Access Denied: Cannot select from columns [ordinal_position, extra_info, table_schema, column_name, data_type, comment, table_name] in table or view local.information_schema.columns");
         // SELECT on INFORMATION_SCHEMA should provide just the visible columns
         assertThat(assertions.query("SELECT * FROM information_schema.columns WHERE table_name = 'nation' AND table_schema = 'tiny'"))
                 .skippingTypesCheck().matches(
