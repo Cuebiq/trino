@@ -1478,9 +1478,9 @@ class StatementAnalyzer
                     translateMaterializedViewColumns(view.getColumns()));
         }
 
-        private List<ConnectorViewDefinition.ViewColumn> translateMaterializedViewColumns(List<ConnectorMaterializedViewDefinition.Column> materializedViewColumns)
+        private List<ViewColumn> translateMaterializedViewColumns(List<ConnectorMaterializedViewDefinition.Column> materializedViewColumns)
         {
-            List<ConnectorViewDefinition.ViewColumn> viewColumns = new ArrayList<>();
+            List<ViewColumn> viewColumns = new ArrayList<>();
             for (ConnectorMaterializedViewDefinition.Column column : materializedViewColumns) {
                 viewColumns.add(new ViewColumn(column.getName(), column.getType()));
             }
@@ -1503,7 +1503,7 @@ class StatementAnalyzer
                 Optional<String> catalog,
                 Optional<String> schema,
                 Optional<String> owner,
-                List<ConnectorViewDefinition.ViewColumn> columns)
+                List<ViewColumn> columns)
         {
             Statement statement = analysis.getStatement();
             if (statement instanceof CreateView) {
@@ -2971,7 +2971,7 @@ class StatementAnalyzer
                     }
                     if (identifierChainBasis.get().getBasisType() == TABLE) {
                         RelationType relationType = identifierChainBasis.get().getRelationType().get();
-                        List<Field> fields = relationType.resolveVisibleFieldsWithRelationPrefix(Optional.of(prefix));
+                        List<Field> fields = filterInaccessibleFields(relationType.resolveVisibleFieldsWithRelationPrefix(Optional.of(prefix)));
                         if (fields.isEmpty()) {
                             throw semanticException(COLUMN_NOT_FOUND, allColumns, "SELECT * not allowed from relation that has no columns");
                         }
@@ -2997,7 +2997,7 @@ class StatementAnalyzer
                     throw semanticException(NOT_SUPPORTED, allColumns, "Column aliases not supported");
                 }
 
-                List<Field> fields = (List<Field>) scope.getRelationType().getVisibleFields();
+                List<Field> fields = filterInaccessibleFields((List<Field>) scope.getRelationType().getVisibleFields());
                 if (fields.isEmpty()) {
                     if (node.getFrom().isEmpty()) {
                         throw semanticException(COLUMN_NOT_FOUND, allColumns, "SELECT * not allowed in queries without FROM clause");
@@ -3007,6 +3007,21 @@ class StatementAnalyzer
 
                 analyzeAllColumnsFromTable(fields, allColumns, node, scope, outputExpressionBuilder, selectExpressionBuilder, scope.getRelationType(), true);
             }
+        }
+
+        private List<Field> filterInaccessibleFields(List<Field> fields)
+        {
+            ImmutableList<Field> authorizedFields = fields.stream()
+                    .filter(field ->
+                            field.getOriginColumnName().isEmpty() ||
+                                    field.getOriginTable().isEmpty() ||
+                                    field.isHidden() ||
+                                    !accessControl.filterColumns(
+                                                    session.toSecurityContext(),
+                                                    field.getOriginTable().get().asCatalogSchemaTableName(),
+                                                    Set.of(field.getOriginColumnName().get()))
+                                            .isEmpty()).collect(toImmutableList());
+            return authorizedFields;
         }
 
         private void analyzeAllColumnsFromTable(
