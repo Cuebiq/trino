@@ -101,6 +101,7 @@ import io.trino.operator.TaskContext;
 import io.trino.operator.TrinoOperatorFactories;
 import io.trino.operator.index.IndexJoinLookupStats;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
+import io.trino.security.AccessControlConfig;
 import io.trino.security.GroupProviderManager;
 import io.trino.server.PluginManager;
 import io.trino.server.SessionPropertyDefaults;
@@ -276,7 +277,8 @@ public class LocalQueryRunner
             int nodeCountForStats,
             Map<String, List<PropertyMetadata<?>>> defaultSessionProperties,
             OperatorFactories operatorFactories,
-            Set<SystemSessionPropertiesProvider> extraSessionProperties)
+            Set<SystemSessionPropertiesProvider> extraSessionProperties,
+            AccessControlConfig accessControlConfig)
     {
         requireNonNull(defaultSession, "defaultSession is null");
         requireNonNull(defaultSessionProperties, "defaultSessionProperties is null");
@@ -333,7 +335,7 @@ public class LocalQueryRunner
         this.costCalculator = new CostCalculatorUsingExchanges(taskCountEstimator);
         this.estimatedExchangesCostCalculator = new CostCalculatorWithEstimatedExchanges(costCalculator, taskCountEstimator);
         this.groupProvider = new TestingGroupProvider();
-        this.accessControl = new TestingAccessControlManager(transactionManager, eventListenerManager);
+        this.accessControl = new TestingAccessControlManager(transactionManager, eventListenerManager, accessControlConfig);
         accessControl.loadSystemAccessControl(AllowAllSystemAccessControl.NAME, ImmutableMap.of());
         this.pageSourceManager = new PageSourceManager();
 
@@ -980,6 +982,7 @@ public class LocalQueryRunner
         private Set<SystemSessionPropertiesProvider> extraSessionProperties = ImmutableSet.of();
         private int nodeCountForStats;
         private OperatorFactories operatorFactories = new TrinoOperatorFactories();
+        private AccessControlConfig accessControlConfig = new AccessControlConfig();
 
         private Builder(Session defaultSession)
         {
@@ -1007,6 +1010,12 @@ public class LocalQueryRunner
         public Builder withAlwaysRevokeMemory()
         {
             this.alwaysRevokeMemory = true;
+            return this;
+        }
+
+        public Builder withAccessControlConfig(AccessControlConfig config)
+        {
+            this.accessControlConfig = config;
             return this;
         }
 
@@ -1050,7 +1059,8 @@ public class LocalQueryRunner
                     nodeCountForStats,
                     defaultSessionProperties,
                     operatorFactories,
-                    extraSessionProperties);
+                    extraSessionProperties,
+                    accessControlConfig);
         }
     }
 }

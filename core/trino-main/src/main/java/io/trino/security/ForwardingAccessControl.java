@@ -227,6 +227,12 @@ public abstract class ForwardingAccessControl
     }
 
     @Override
+    public Set<String> filterInaccessibleColumns(SecurityContext context, CatalogSchemaTableName tableName, Set<String> columns)
+    {
+        return delegate().filterInaccessibleColumns(context, tableName, columns);
+    }
+
+    @Override
     public void checkCanAddColumns(SecurityContext context, QualifiedObjectName tableName)
     {
         delegate().checkCanAddColumns(context, tableName);

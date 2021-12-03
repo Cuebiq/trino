@@ -66,7 +66,6 @@ public final class SystemSessionProperties
     public static final String QUERY_MAX_EXECUTION_TIME = "query_max_execution_time";
     public static final String QUERY_MAX_PLANNING_TIME = "query_max_planning_time";
     public static final String QUERY_MAX_RUN_TIME = "query_max_run_time";
-    public static final String QUERY_HIDE_INACCESSIBLE_COLUMNS = "query_hide_inaccessible_columns";
     public static final String RESOURCE_OVERCOMMIT = "resource_overcommit";
     public static final String QUERY_MAX_CPU_TIME = "query_max_cpu_time";
     public static final String QUERY_MAX_SCAN_PHYSICAL_BYTES = "query_max_scan_physical_bytes";
@@ -663,10 +662,6 @@ public final class SystemSessionProperties
                         featuresConfig.isLegacyCatalogRoles(),
                         true),
                 booleanProperty(
-                        QUERY_HIDE_INACCESSIBLE_COLUMNS,
-                        "Hide inaccesible columns in queries so that 'Select *' statement can be used",
-                        queryManagerConfig.isHideUnaccessibleColumns(), false),
-                booleanProperty(
                         INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED,
                         "Use smaller load factor for small hash arrays in order to improve performance",
                         featuresConfig.isIncrementalHashArrayLoadFactorEnabled(),
@@ -1182,11 +1177,6 @@ public final class SystemSessionProperties
     public static boolean isLegacyCatalogRoles(Session session)
     {
         return session.getSystemProperty(LEGACY_CATALOG_ROLES, Boolean.class);
-    }
-
-    public static boolean isHideInaccesibleColumns(Session session)
-    {
-        return session.getSystemProperty(QUERY_HIDE_INACCESSIBLE_COLUMNS, Boolean.class);
     }
 
     public static boolean isIncrementalHashArrayLoadFactorEnabled(Session session)
