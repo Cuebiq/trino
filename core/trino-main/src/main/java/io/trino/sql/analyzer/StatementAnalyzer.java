@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 import io.trino.Session;
-import io.trino.SystemSessionProperties;
 import io.trino.connector.CatalogName;
 import io.trino.execution.Column;
 import io.trino.execution.warnings.WarningCollector;
@@ -3191,22 +3190,17 @@ class StatementAnalyzer
 
         private List<Field> filterInaccessibleFields(List<Field> fields)
         {
-            if (SystemSessionProperties.isHideInaccesibleColumns(session)) {
-                ImmutableList<Field> authorizedFields = fields.stream()
-                        .filter(field ->
-                                field.getOriginColumnName().isEmpty() ||
-                                        field.getOriginTable().isEmpty() ||
-                                        field.isHidden() ||
-                                        !accessControl.filterColumns(
-                                                        session.toSecurityContext(),
-                                                        field.getOriginTable().get().asCatalogSchemaTableName(),
-                                                        Set.of(field.getOriginColumnName().get()))
-                                                .isEmpty()).collect(toImmutableList());
-                return authorizedFields;
-            }
-            else {
-                return ImmutableList.copyOf(fields);
-            }
+            ImmutableList<Field> authorizedFields = fields.stream()
+                    .filter(field ->
+                            field.getOriginColumnName().isEmpty() ||
+                                    field.getOriginTable().isEmpty() ||
+                                    field.isHidden() ||
+                                    !accessControl.filterInaccessibleColumns(
+                                                    session.toSecurityContext(),
+                                                    field.getOriginTable().get().asCatalogSchemaTableName(),
+                                                    Set.of(field.getOriginColumnName().get()))
+                                            .isEmpty()).collect(toImmutableList());
+            return authorizedFields;
         }
 
         private void analyzeAllColumnsFromTable(
@@ -3984,7 +3978,7 @@ class StatementAnalyzer
                         aliases.add(canonicalizationAwareKey((Identifier) column.getExpression()));
                     }
                     else if (column.getExpression() instanceof DereferenceExpression) {
-                        aliases.add(canonicalizationAwareKey(((DereferenceExpression) column.getExpression()).getField()));
+                        aliases.add(canonicalizationAwareKey(((DereferenceExpression) column.getExpression()).getField().orElseThrow()));
                     }
                 }
                 else if (item instanceof AllColumns) {

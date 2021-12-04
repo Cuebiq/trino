@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import io.trino.Session;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.plugin.tpch.TpchConnectorFactory;
+import io.trino.security.AccessControlConfig;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.ViewExpression;
 import io.trino.testing.LocalQueryRunner;
@@ -44,7 +45,6 @@ public class TestFilterInaccessibleColumns
             .setCatalog(CATALOG)
             .setSchema(TINY_SCHEMA_NAME)
             .setIdentity(Identity.forUser(USER).build())
-            .setSystemProperty("query_hide_inaccessible_columns", "true")
             .build();
 
     private QueryAssertions assertions;
@@ -53,7 +53,10 @@ public class TestFilterInaccessibleColumns
     @BeforeClass
     public void init()
     {
-        LocalQueryRunner runner = LocalQueryRunner.builder(SESSION).build();
+        LocalQueryRunner runner = LocalQueryRunner.builder(SESSION)
+                .withAccessControlConfig(new AccessControlConfig().setHideInaccesibleColumns(true))
+                .build();
+
         runner.createCatalog(CATALOG, new TpchConnectorFactory(1), ImmutableMap.of());
         assertions = new QueryAssertions(runner);
         accessControl = assertions.getQueryRunner().getAccessControl();

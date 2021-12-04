@@ -57,6 +57,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
         "fast-inequality-joins",
         "histogram.implementation",
         "multimapagg.implementation",
+        "optimizer.iterative-rule-based-column-pruning",
         "optimizer.processing-optimization",
         "resource-group-manager",
 })
@@ -106,6 +107,8 @@ public class FeaturesConfig
     private boolean spillEnabled;
     private boolean spillOrderBy = true;
     private boolean spillWindowOperator = true;
+    private boolean spillDistinctingAggregationsEnabled = true;
+    private boolean spillOrderingAggregationsEnabled = true;
     private DataSize aggregationOperatorUnspillMemoryLimit = DataSize.of(4, DataSize.Unit.MEGABYTE);
     private List<Path> spillerSpillPaths = ImmutableList.of();
     private int spillerThreads = 4;
@@ -128,7 +131,6 @@ public class FeaturesConfig
     private boolean skipRedundantSort = true;
     private boolean predicatePushdownUseTableProperties = true;
     private boolean ignoreDownstreamPreferences;
-    private boolean iterativeRuleBasedColumnPruning = true;
     private boolean rewriteFilteringSemiJoinToInnerJoin = true;
     private boolean optimizeDuplicateInsensitiveJoins = true;
     private boolean useLegacyWindowFilterPushdown;
@@ -596,6 +598,32 @@ public class FeaturesConfig
         return this;
     }
 
+    @Config("spill-distincting-aggregations-enabled")
+    @ConfigDescription("Spill distincting aggregations if spill is enabled")
+    public FeaturesConfig setSpillDistinctingAggregationsEnabled(boolean spillDistinctingAggregationsEnabled)
+    {
+        this.spillDistinctingAggregationsEnabled = spillDistinctingAggregationsEnabled;
+        return this;
+    }
+
+    public boolean isSpillDistinctingAggregationsEnabled()
+    {
+        return spillDistinctingAggregationsEnabled;
+    }
+
+    @Config("spill-ordering-aggregations-enabled")
+    @ConfigDescription("Spill ordering aggregations if spill is enabled")
+    public FeaturesConfig setSpillOrderingAggregationsEnabled(boolean spillOrderingAggregationsEnabled)
+    {
+        this.spillOrderingAggregationsEnabled = spillOrderingAggregationsEnabled;
+        return this;
+    }
+
+    public boolean isSpillOrderingAggregationsEnabled()
+    {
+        return spillOrderingAggregationsEnabled;
+    }
+
     public Duration getIterativeOptimizerTimeout()
     {
         return iterativeOptimizerTimeout;
@@ -990,18 +1018,6 @@ public class FeaturesConfig
     public FeaturesConfig setIgnoreDownstreamPreferences(boolean ignoreDownstreamPreferences)
     {
         this.ignoreDownstreamPreferences = ignoreDownstreamPreferences;
-        return this;
-    }
-
-    public boolean isIterativeRuleBasedColumnPruning()
-    {
-        return iterativeRuleBasedColumnPruning;
-    }
-
-    @Config("optimizer.iterative-rule-based-column-pruning")
-    public FeaturesConfig setIterativeRuleBasedColumnPruning(boolean iterativeRuleBasedColumnPruning)
-    {
-        this.iterativeRuleBasedColumnPruning = iterativeRuleBasedColumnPruning;
         return this;
     }
 

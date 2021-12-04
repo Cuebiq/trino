@@ -28,8 +28,10 @@ public class TestAccessControlConfig
     @Test
     public void testDefaults()
     {
-        ConfigAssertions.assertRecordedDefaults(ConfigAssertions.recordDefaults(AccessControlConfig.class)
-                .setAccessControlFiles(""));
+        ConfigAssertions.assertRecordedDefaults(
+                ConfigAssertions.recordDefaults(AccessControlConfig.class)
+                        .setAccessControlFiles("")
+                        .setHideInaccesibleColumns(false));
     }
 
     @Test
@@ -41,10 +43,12 @@ public class TestAccessControlConfig
 
         Map<String, String> properties = new ImmutableMap.Builder<String, String>()
                 .put("access-control.config-files", config1.toString() + "," + config2.toString())
+                .put("access-control.hide-inaccessible-columns", "true")
                 .build();
 
         AccessControlConfig expected = new AccessControlConfig()
-                .setAccessControlFiles(ImmutableList.of(config1.toFile(), config2.toFile()));
+                .setAccessControlFiles(ImmutableList.of(config1.toFile(), config2.toFile()))
+                .setHideInaccesibleColumns(true);
 
         ConfigAssertions.assertFullMapping(properties, expected);
     }

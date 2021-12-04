@@ -61,6 +61,12 @@ public class ViewAccessControl
     }
 
     @Override
+    public Set<String> filterInaccessibleColumns(SecurityContext context, CatalogSchemaTableName tableName, Set<String> columns)
+    {
+        return delegate.filterInaccessibleColumns(context, tableName, columns);
+    }
+
+    @Override
     public void checkCanCreateViewWithSelectFromColumns(SecurityContext context, QualifiedObjectName tableName, Set<String> columnNames)
     {
         wrapAccessDeniedException(() -> delegate.checkCanCreateViewWithSelectFromColumns(context, tableName, columnNames));

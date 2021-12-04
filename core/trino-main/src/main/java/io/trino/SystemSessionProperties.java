@@ -66,7 +66,6 @@ public final class SystemSessionProperties
     public static final String QUERY_MAX_EXECUTION_TIME = "query_max_execution_time";
     public static final String QUERY_MAX_PLANNING_TIME = "query_max_planning_time";
     public static final String QUERY_MAX_RUN_TIME = "query_max_run_time";
-    public static final String QUERY_HIDE_INACCESSIBLE_COLUMNS = "query_hide_inaccessible_columns";
     public static final String RESOURCE_OVERCOMMIT = "resource_overcommit";
     public static final String QUERY_MAX_CPU_TIME = "query_max_cpu_time";
     public static final String QUERY_MAX_SCAN_PHYSICAL_BYTES = "query_max_scan_physical_bytes";
@@ -94,6 +93,8 @@ public final class SystemSessionProperties
     public static final String SPILL_ENABLED = "spill_enabled";
     public static final String SPILL_ORDER_BY = "spill_order_by";
     public static final String SPILL_WINDOW_OPERATOR = "spill_window_operator";
+    public static final String SPILL_DISTINCTING_AGGREGATIONS_ENABLED = "spill_distincting_aggregations_enabled";
+    public static final String SPILL_ORDERING_AGGREGATIONS_ENABLED = "spill_ordering_aggregations_enabled";
     public static final String AGGREGATION_OPERATOR_UNSPILL_MEMORY_LIMIT = "aggregation_operator_unspill_memory_limit";
     public static final String OPTIMIZE_DISTINCT_AGGREGATIONS = "optimize_mixed_distinct_aggregations";
     public static final String ITERATIVE_OPTIMIZER_TIMEOUT = "iterative_optimizer_timeout";
@@ -131,7 +132,6 @@ public final class SystemSessionProperties
     public static final String QUERY_MAX_MEMORY_PER_NODE = "query_max_memory_per_node";
     public static final String QUERY_MAX_TOTAL_MEMORY_PER_NODE = "query_max_total_memory_per_node";
     public static final String IGNORE_DOWNSTREAM_PREFERENCES = "ignore_downstream_preferences";
-    public static final String ITERATIVE_COLUMN_PRUNING = "iterative_rule_based_column_pruning";
     public static final String FILTERING_SEMI_JOIN_TO_INNER = "rewrite_filtering_semi_join_to_inner_join";
     public static final String OPTIMIZE_DUPLICATE_INSENSITIVE_JOINS = "optimize_duplicate_insensitive_joins";
     public static final String REQUIRED_WORKERS_COUNT = "required_workers_count";
@@ -144,6 +144,7 @@ public final class SystemSessionProperties
     public static final String TIME_ZONE_ID = "time_zone_id";
     public static final String LEGACY_CATALOG_ROLES = "legacy_catalog_roles";
     public static final String INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED = "incremental_hash_array_load_factor_enabled";
+    public static final String MAX_PARTIAL_TOP_N_MEMORY = "max_partial_top_n_memory";
 
     private final List<PropertyMetadata<?>> sessionProperties;
 
@@ -397,6 +398,16 @@ public final class SystemSessionProperties
                         "Spill in WindowOperator if spill_enabled is also set",
                         featuresConfig.isSpillWindowOperator(),
                         false),
+                booleanProperty(
+                        SPILL_DISTINCTING_AGGREGATIONS_ENABLED,
+                        "Enable spill for distincting aggregations if spill_enabled",
+                        featuresConfig.isSpillDistinctingAggregationsEnabled(),
+                        false),
+                booleanProperty(
+                        SPILL_ORDERING_AGGREGATIONS_ENABLED,
+                        "Enable spill for ordering aggregations if spill_enabled",
+                        featuresConfig.isSpillOrderingAggregationsEnabled(),
+                        false),
                 dataSizeProperty(
                         AGGREGATION_OPERATOR_UNSPILL_MEMORY_LIMIT,
                         "How much memory should be allocated per aggregation operator in unspilling process",
@@ -594,11 +605,6 @@ public final class SystemSessionProperties
                         featuresConfig.isIgnoreDownstreamPreferences(),
                         false),
                 booleanProperty(
-                        ITERATIVE_COLUMN_PRUNING,
-                        "Use iterative rules to prune unreferenced columns",
-                        featuresConfig.isIterativeRuleBasedColumnPruning(),
-                        false),
-                booleanProperty(
                         FILTERING_SEMI_JOIN_TO_INNER,
                         "Rewrite semi join in filtering context to inner join",
                         featuresConfig.isRewriteFilteringSemiJoinToInnerJoin(),
@@ -663,13 +669,14 @@ public final class SystemSessionProperties
                         featuresConfig.isLegacyCatalogRoles(),
                         true),
                 booleanProperty(
-                        QUERY_HIDE_INACCESSIBLE_COLUMNS,
-                        "Hide inaccesible columns in queries so that 'Select *' statement can be used",
-                        queryManagerConfig.isHideUnaccessibleColumns(), false),
-                booleanProperty(
                         INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED,
                         "Use smaller load factor for small hash arrays in order to improve performance",
                         featuresConfig.isIncrementalHashArrayLoadFactorEnabled(),
+                        false),
+                dataSizeProperty(
+                        MAX_PARTIAL_TOP_N_MEMORY,
+                        "Max memory size for partial Top N aggregations. This can be turned off by setting it with '0'.",
+                        taskManagerConfig.getMaxPartialTopNMemory(),
                         false));
     }
 
@@ -901,6 +908,16 @@ public final class SystemSessionProperties
         return session.getSystemProperty(SPILL_WINDOW_OPERATOR, Boolean.class);
     }
 
+    public static boolean isSpillDistinctingAggregationsEnabled(Session session)
+    {
+        return session.getSystemProperty(SPILL_DISTINCTING_AGGREGATIONS_ENABLED, Boolean.class) && isSpillEnabled(session);
+    }
+
+    public static boolean isSpillOrderingAggregationsEnabled(Session session)
+    {
+        return session.getSystemProperty(SPILL_ORDERING_AGGREGATIONS_ENABLED, Boolean.class) && isSpillEnabled(session);
+    }
+
     public static DataSize getAggregationOperatorUnspillMemoryLimit(Session session)
     {
         DataSize memoryLimitForMerge = session.getSystemProperty(AGGREGATION_OPERATOR_UNSPILL_MEMORY_LIMIT, DataSize.class);
@@ -1124,11 +1141,6 @@ public final class SystemSessionProperties
         return session.getSystemProperty(IGNORE_DOWNSTREAM_PREFERENCES, Boolean.class);
     }
 
-    public static boolean isIterativeRuleBasedColumnPruning(Session session)
-    {
-        return session.getSystemProperty(ITERATIVE_COLUMN_PRUNING, Boolean.class);
-    }
-
     public static boolean isRewriteFilteringSemiJoinToInnerJoin(Session session)
     {
         return session.getSystemProperty(FILTERING_SEMI_JOIN_TO_INNER, Boolean.class);
@@ -1184,13 +1196,13 @@ public final class SystemSessionProperties
         return session.getSystemProperty(LEGACY_CATALOG_ROLES, Boolean.class);
     }
 
-    public static boolean isHideInaccesibleColumns(Session session)
-    {
-        return session.getSystemProperty(QUERY_HIDE_INACCESSIBLE_COLUMNS, Boolean.class);
-    }
-
     public static boolean isIncrementalHashArrayLoadFactorEnabled(Session session)
     {
         return session.getSystemProperty(INCREMENTAL_HASH_ARRAY_LOAD_FACTOR_ENABLED, Boolean.class);
+    }
+
+    public static DataSize getMaxPartialTopNMemory(Session session)
+    {
+        return session.getSystemProperty(MAX_PARTIAL_TOP_N_MEMORY, DataSize.class);
     }
 }

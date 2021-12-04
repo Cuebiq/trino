@@ -137,7 +137,9 @@ public interface SystemAccessControl
      * will not be called when the current user is the query owner.
      *
      * @throws AccessDeniedException if not allowed
+     * @deprecated Implement {@link #checkCanViewQueryOwnedBy(SystemSecurityContext, Identity)} instead.
      */
+    @Deprecated
     default void checkCanViewQueryOwnedBy(SystemSecurityContext context, String queryOwner)
     {
         denyViewQuery();
@@ -147,7 +149,7 @@ public interface SystemAccessControl
      * Filter the list of users to those the identity view query owned by the user.  The method
      * will not be called with the current user in the set.
      */
-    default Collection<Identity> filterViewQuery(SystemSecurityContext context, Collection<Identity> queryOwners)
+    default Collection<Identity> filterViewQueryOwnedBy(SystemSecurityContext context, Collection<Identity> queryOwners)
     {
         Set<String> ownerUsers = queryOwners.stream()
                 .map(Identity::getUser)
@@ -161,7 +163,10 @@ public interface SystemAccessControl
     /**
      * Filter the list of users to those the identity view query owned by the user.  The method
      * will not be called with the current user in the set.
+     *
+     * @deprecated Implement {@link #filterViewQueryOwnedBy(SystemSecurityContext, Collection)} instead.
      */
+    @Deprecated
     default Set<String> filterViewQueryOwnedBy(SystemSecurityContext context, Set<String> queryOwners)
     {
         return emptySet();
@@ -183,7 +188,9 @@ public interface SystemAccessControl
      * will not be called when the current user is the query owner.
      *
      * @throws AccessDeniedException if not allowed
+     * @deprecated Implement {@link #checkCanKillQueryOwnedBy(SystemSecurityContext, Identity)} instead.
      */
+    @Deprecated
     default void checkCanKillQueryOwnedBy(SystemSecurityContext context, String queryOwner)
     {
         denyKillQuery();

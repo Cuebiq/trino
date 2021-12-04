@@ -87,6 +87,7 @@ public class AccessControlManager
     private final TransactionManager transactionManager;
     private final EventListenerManager eventListenerManager;
     private final List<File> configFiles;
+    private final boolean hideInaccessibleColumns;
     private final String defaultAccessControlName;
     private final Map<String, SystemAccessControlFactory> systemAccessControlFactories = new ConcurrentHashMap<>();
     private final Map<CatalogName, CatalogAccessControlEntry> connectorAccessControl = new ConcurrentHashMap<>();
@@ -106,6 +107,7 @@ public class AccessControlManager
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
         this.eventListenerManager = requireNonNull(eventListenerManager, "eventListenerManager is null");
         this.configFiles = ImmutableList.copyOf(config.getAccessControlFiles());
+        this.hideInaccessibleColumns = config.isHideInaccesibleColumns();
         this.defaultAccessControlName = requireNonNull(defaultAccessControlName, "defaultAccessControl is null");
         addSystemAccessControlFactory(new DefaultSystemAccessControl.Factory());
         addSystemAccessControlFactory(new AllowAllSystemAccessControl.Factory());
@@ -275,7 +277,7 @@ public class AccessControlManager
     public Collection<Identity> filterQueriesOwnedBy(Identity identity, Collection<Identity> queryOwners)
     {
         for (SystemAccessControl systemAccessControl : getSystemAccessControls()) {
-            queryOwners = systemAccessControl.filterViewQuery(new SystemSecurityContext(identity, Optional.empty()), queryOwners);
+            queryOwners = systemAccessControl.filterViewQueryOwnedBy(new SystemSecurityContext(identity, Optional.empty()), queryOwners);
         }
         return queryOwners;
     }
@@ -574,6 +576,16 @@ public class AccessControlManager
             columns = entry.getAccessControl().filterColumns(entry.toConnectorSecurityContext(securityContext), table.getSchemaTableName(), columns);
         }
         return columns;
+    }
+
+    @Override
+    public Set<String> filterInaccessibleColumns(SecurityContext securityContext, CatalogSchemaTableName table, Set<String> columns)
+    {
+        if (!hideInaccessibleColumns) {
+            return columns;
+        }
+
+        return filterColumns(securityContext, table, columns);
     }
 
     @Override
