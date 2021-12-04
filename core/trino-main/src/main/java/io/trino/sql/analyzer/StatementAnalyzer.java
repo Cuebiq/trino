@@ -3978,7 +3978,7 @@ class StatementAnalyzer
                         aliases.add(canonicalizationAwareKey((Identifier) column.getExpression()));
                     }
                     else if (column.getExpression() instanceof DereferenceExpression) {
-                        aliases.add(canonicalizationAwareKey(((DereferenceExpression) column.getExpression()).getField()));
+                        aliases.add(canonicalizationAwareKey(((DereferenceExpression) column.getExpression()).getField().orElseThrow()));
                     }
                 }
                 else if (item instanceof AllColumns) {

@@ -10,7 +10,7 @@
 
     <groupId>io.trino</groupId>
     <artifactId>trino-root</artifactId>
-    <version>365-SNAPSHOT</version>
+    <version>366-SNAPSHOT</version>
 
     <name>trino-root</name>
     <description>Trino</description>
@@ -70,7 +70,7 @@
         <!-- TODO(https://github.com/airlift/airbase/pull/281): Required by testcontainers, remove when pulled from Airbase -->
         <dep.slf4j.version>1.7.32</dep.slf4j.version>
 
-        <dep.docker.images.version>52</dep.docker.images.version>
+        <dep.docker.images.version>53</dep.docker.images.version>
 
         <!--
           America/Bahia_Banderas has:
@@ -989,6 +989,12 @@
             </dependency>
 
             <dependency>
+                <groupId>com.github.oshi</groupId>
+                <artifactId>oshi-core</artifactId>
+                <version>5.8.5</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.github.scribejava</groupId>
                 <artifactId>scribejava-apis</artifactId>
                 <version>${dep.scribejava.version}</version>
@@ -1301,7 +1307,7 @@
                 <!-- org.testcontainers:testcontainer's dependencies pull two different versions of this artifact and this is to negotiate the version -->
                 <groupId>net.java.dev.jna</groupId>
                 <artifactId>jna</artifactId>
-                <version>5.8.0</version>
+                <version>5.10.0</version>
             </dependency>
 
             <dependency>

@@ -72,6 +72,7 @@ import org.apache.iceberg.Schema;
 import org.apache.iceberg.SchemaParser;
 import org.apache.iceberg.Snapshot;
 import org.apache.iceberg.Table;
+import org.apache.iceberg.TableProperties;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.Transaction;
 import org.apache.iceberg.io.CloseableIterable;
@@ -181,6 +182,7 @@ public class IcebergMetadata
         }
         Optional<Long> snapshotId = getSnapshotId(table, name.getSnapshotId());
 
+        String nameMappingJson = table.properties().get(TableProperties.DEFAULT_NAME_MAPPING);
         return new IcebergTableHandle(
                 tableName.getSchemaName(),
                 name.getTableName(),
@@ -188,7 +190,8 @@ public class IcebergMetadata
                 snapshotId,
                 TupleDomain.all(),
                 TupleDomain.all(),
-                ImmutableSet.of());
+                ImmutableSet.of(),
+                Optional.ofNullable(nameMappingJson));
     }
 
     @Override
@@ -422,6 +425,7 @@ public class IcebergMetadata
     @Override
     public ConnectorOutputTableHandle beginCreateTable(ConnectorSession session, ConnectorTableMetadata tableMetadata, Optional<ConnectorNewTableLayout> layout)
     {
+        verify(transaction == null, "transaction already set");
         transaction = newCreateTableTransaction(catalog, tableMetadata, session);
         return new IcebergWritableTableHandle(
                 tableMetadata.getTable().getSchemaName(),
@@ -480,6 +484,7 @@ public class IcebergMetadata
         IcebergTableHandle table = (IcebergTableHandle) tableHandle;
         Table icebergTable = catalog.loadTable(session, table.getSchemaTableName());
 
+        verify(transaction == null, "transaction already set");
         transaction = icebergTable.newTransaction();
 
         return new IcebergWritableTableHandle(
@@ -527,6 +532,7 @@ public class IcebergMetadata
 
         appendFiles.commit();
         transaction.commitTransaction();
+        transaction = null;
 
         return Optional.of(new HiveWrittenPartitions(commitTasks.stream()
                 .map(CommitTaskData::getPath)
@@ -729,7 +735,8 @@ public class IcebergMetadata
                         table.getSnapshotId(),
                         newUnenforcedConstraint,
                         newEnforcedConstraint,
-                        table.getProjectedColumns()),
+                        table.getProjectedColumns(),
+                        table.getNameMappingJson()),
                 remainingConstraint.transformKeys(ColumnHandle.class::cast),
                 false));
     }
@@ -899,6 +906,7 @@ public class IcebergMetadata
     {
         IcebergTableHandle table = (IcebergTableHandle) tableHandle;
         Table icebergTable = catalog.loadTable(session, table.getSchemaTableName());
+        verify(transaction == null, "transaction already set");
         transaction = icebergTable.newTransaction();
 
         return new IcebergWritableTableHandle(
@@ -964,6 +972,7 @@ public class IcebergMetadata
         appendFiles.commit();
 
         transaction.commitTransaction();
+        transaction = null;
         return Optional.of(new HiveWrittenPartitions(commitTasks.stream()
                 .map(CommitTaskData::getPath)
                 .collect(toImmutableList())));

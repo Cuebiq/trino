@@ -252,6 +252,7 @@ public class LocalQueryRunner
     private final boolean alwaysRevokeMemory;
     private final NodeSpillConfig nodeSpillConfig;
     private final FeaturesConfig featuresConfig;
+    private final PlanOptimizersProvider planOptimizersProvider;
     private final OperatorFactories operatorFactories;
     private boolean printPlan;
 
@@ -276,6 +277,7 @@ public class LocalQueryRunner
             boolean alwaysRevokeMemory,
             int nodeCountForStats,
             Map<String, List<PropertyMetadata<?>>> defaultSessionProperties,
+            PlanOptimizersProvider planOptimizersProvider,
             OperatorFactories operatorFactories,
             Set<SystemSessionPropertiesProvider> extraSessionProperties,
             AccessControlConfig accessControlConfig)
@@ -286,6 +288,7 @@ public class LocalQueryRunner
 
         this.taskManagerConfig = new TaskManagerConfig().setTaskConcurrency(4);
         this.nodeSpillConfig = requireNonNull(nodeSpillConfig, "nodeSpillConfig is null");
+        this.planOptimizersProvider = requireNonNull(planOptimizersProvider, "planOptimizersProvider is null");
         this.operatorFactories = requireNonNull(operatorFactories, "operatorFactories is null");
         this.alwaysRevokeMemory = alwaysRevokeMemory;
         this.notificationExecutor = newCachedThreadPool(daemonThreadsNamed("local-query-runner-executor-%s"));
@@ -880,22 +883,21 @@ public class LocalQueryRunner
 
     public List<PlanOptimizer> getPlanOptimizers(boolean forceSingleNode)
     {
-        return new PlanOptimizers(
+        return planOptimizersProvider.getPlanOptimizers(
+                forceSingleNode,
+                sqlParser,
                 metadata,
                 typeOperators,
-                new TypeAnalyzer(sqlParser, metadata),
                 taskManagerConfig,
-                forceSingleNode,
                 splitManager,
                 pageSourceManager,
                 statsCalculator,
                 scalarStatsCalculator,
                 costCalculator,
                 estimatedExchangesCostCalculator,
-                new CostComparator(featuresConfig),
+                featuresConfig,
                 taskCountEstimator,
-                nodePartitioningManager,
-                new RuleStatsRecorder()).get();
+                nodePartitioningManager);
     }
 
     public Plan createPlan(Session session, @Language("SQL") String sql, List<PlanOptimizer> optimizers, WarningCollector warningCollector)
@@ -971,6 +973,25 @@ public class LocalQueryRunner
                 .findAll();
     }
 
+    public interface PlanOptimizersProvider
+    {
+        List<PlanOptimizer> getPlanOptimizers(
+                boolean forceSingleNode,
+                SqlParser sqlParser,
+                MetadataManager metadata,
+                TypeOperators typeOperators,
+                TaskManagerConfig taskManagerConfig,
+                SplitManager splitManager,
+                PageSourceManager pageSourceManager,
+                StatsCalculator statsCalculator,
+                ScalarStatsCalculator scalarStatsCalculator,
+                CostCalculator costCalculator,
+                CostCalculator estimatedExchangesCostCalculator,
+                FeaturesConfig featuresConfig,
+                TaskCountEstimator taskCountEstimator,
+                NodePartitioningManager nodePartitioningManager);
+    }
+
     public static class Builder
     {
         private final Session defaultSession;
@@ -981,6 +1002,37 @@ public class LocalQueryRunner
         private Map<String, List<PropertyMetadata<?>>> defaultSessionProperties = ImmutableMap.of();
         private Set<SystemSessionPropertiesProvider> extraSessionProperties = ImmutableSet.of();
         private int nodeCountForStats;
+        private PlanOptimizersProvider planOptimizersProvider = (
+                forceSingleNode,
+                sqlParser,
+                metadata,
+                typeOperators,
+                taskManagerConfig,
+                splitManager,
+                pageSourceManager,
+                statsCalculator,
+                scalarStatsCalculator,
+                costCalculator,
+                estimatedExchangesCostCalculator,
+                featuresConfig,
+                taskCountEstimator,
+                nodePartitioningManager) ->
+                new PlanOptimizers(
+                        metadata,
+                        typeOperators,
+                        new TypeAnalyzer(sqlParser, metadata),
+                        taskManagerConfig,
+                        forceSingleNode,
+                        splitManager,
+                        pageSourceManager,
+                        statsCalculator,
+                        scalarStatsCalculator,
+                        costCalculator,
+                        estimatedExchangesCostCalculator,
+                        new CostComparator(featuresConfig),
+                        taskCountEstimator,
+                        nodePartitioningManager,
+                        new RuleStatsRecorder()).get();
         private OperatorFactories operatorFactories = new TrinoOperatorFactories();
         private AccessControlConfig accessControlConfig = new AccessControlConfig();
 
@@ -1031,6 +1083,12 @@ public class LocalQueryRunner
             return this;
         }
 
+        public Builder withPlanOptimizersProvider(PlanOptimizersProvider planOptimizersProvider)
+        {
+            this.planOptimizersProvider = requireNonNull(planOptimizersProvider, "planOptimizersProvider is null");
+            return this;
+        }
+
         public Builder withOperatorFactories(OperatorFactories operatorFactories)
         {
             this.operatorFactories = requireNonNull(operatorFactories, "operatorFactories is null");
@@ -1058,6 +1116,7 @@ public class LocalQueryRunner
                     alwaysRevokeMemory,
                     nodeCountForStats,
                     defaultSessionProperties,
+                    planOptimizersProvider,
                     operatorFactories,
                     extraSessionProperties,
                     accessControlConfig);
