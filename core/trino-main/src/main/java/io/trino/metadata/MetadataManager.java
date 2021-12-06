@@ -922,6 +922,7 @@ public final class MetadataManager
         metadata.dropColumn(session.toConnectorSession(catalogName), tableHandle.getConnectorHandle(), column);
     }
 
+    @Override
     public boolean isHideInaccesibleColumns()
     {
         return hideInaccesibleColumns;
