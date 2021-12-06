@@ -3564,7 +3564,7 @@ class StatementAnalyzer
                         expression,
                         warningCollector,
                         correlationSupport,
-                        true);
+                        metadata.isHideInaccesibleColumns());
             }
             catch (TrinoException e) {
                 throw new TrinoException(e::getErrorCode, extractLocation(table), format("Invalid row filter for '%s': %s", name, e.getRawMessage()), e);
@@ -3621,7 +3621,7 @@ class StatementAnalyzer
                         expression,
                         warningCollector,
                         correlationSupport,
-                        true);
+                        metadata.isHideInaccesibleColumns());
             }
             catch (TrinoException e) {
                 throw new TrinoException(e::getErrorCode, extractLocation(table), format("Invalid column mask for '%s.%s': %s", tableName, column, e.getRawMessage()), e);

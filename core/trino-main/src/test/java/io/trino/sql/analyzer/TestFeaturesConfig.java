@@ -200,7 +200,7 @@ public class TestFeaturesConfig
                 .put("deprecated.legacy-catalog-roles", "true")
                 .put("deprecated.disable-set-properties-security-check-for-create-ddl", "true")
                 .put("incremental-hash-array-load-factor.enabled", "false")
-                .put("experimental.hide-inaccessible-columns","true")
+                .put("experimental.hide-inaccessible-columns", "true")
                 .build();
 
         FeaturesConfig expected = new FeaturesConfig()

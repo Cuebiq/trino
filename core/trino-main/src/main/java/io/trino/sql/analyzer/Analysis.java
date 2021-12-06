@@ -133,7 +133,7 @@ public class Analysis
     // a map of users to the columns per table that they access
     private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferences = new LinkedHashMap<>();
 
-    // a map of users to the columns per table that they access in row filter
+    // a map of users to the columns per table that they access in row filter or column masking
     private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> filteredTableColumnReferences = new LinkedHashMap<>();
 
     // Record fields prefixed with labels in row pattern recognition context
