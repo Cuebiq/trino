@@ -43,6 +43,7 @@ import io.trino.metadata.ViewColumn;
 import io.trino.metadata.ViewDefinition;
 import io.trino.security.AccessControl;
 import io.trino.security.AllowAllAccessControl;
+import io.trino.security.SecurityContext;
 import io.trino.security.ViewAccessControl;
 import io.trino.spi.TrinoException;
 import io.trino.spi.TrinoWarning;
@@ -322,6 +323,8 @@ class StatementAnalyzer
     private final AccessControl accessControl;
     private final WarningCollector warningCollector;
     private final CorrelationSupport correlationSupport;
+
+    static boolean isHideInaccessibleColumns;
 
     public StatementAnalyzer(
             Analysis analysis,
@@ -3190,17 +3193,25 @@ class StatementAnalyzer
 
         private List<Field> filterInaccessibleFields(List<Field> fields)
         {
-            ImmutableList<Field> authorizedFields = fields.stream()
+            return fields.stream()
                     .filter(field ->
-                            field.getOriginColumnName().isEmpty() ||
-                                    field.getOriginTable().isEmpty() ||
-                                    field.isHidden() ||
-                                    !accessControl.filterInaccessibleColumns(
-                                                    session.toSecurityContext(),
-                                                    field.getOriginTable().get().asCatalogSchemaTableName(),
-                                                    Set.of(field.getOriginColumnName().get()))
-                                            .isEmpty()).collect(toImmutableList());
-            return authorizedFields;
+                                field.getOriginColumnName().isEmpty() ||
+                                field.getOriginTable().isEmpty() ||
+                                !filterInaccessibleColumns(
+                                                session.toSecurityContext(),
+                                                field.getOriginTable().get().asCatalogSchemaTableName(),
+                                                Set.of(field.getOriginColumnName().get()))
+                                        .isEmpty()).collect(toImmutableList());
+        }
+
+        public Set<String> filterInaccessibleColumns(SecurityContext securityContext, CatalogSchemaTableName table, Set<String> columns)
+        {
+            //TODO: fix static configuration
+            if (!isHideInaccessibleColumns) {
+                return columns;
+            }
+
+            return accessControl.filterColumns(securityContext, table, columns);
         }
 
         private void analyzeAllColumnsFromTable(
@@ -3555,7 +3566,8 @@ class StatementAnalyzer
                         analysis,
                         expression,
                         warningCollector,
-                        correlationSupport);
+                        correlationSupport,
+                        true);
             }
             catch (TrinoException e) {
                 throw new TrinoException(e::getErrorCode, extractLocation(table), format("Invalid row filter for '%s': %s", name, e.getRawMessage()), e);
@@ -3611,7 +3623,8 @@ class StatementAnalyzer
                         analysis,
                         expression,
                         warningCollector,
-                        correlationSupport);
+                        correlationSupport,
+                        true);
             }
             catch (TrinoException e) {
                 throw new TrinoException(e::getErrorCode, extractLocation(table), format("Invalid column mask for '%s.%s': %s", tableName, column, e.getRawMessage()), e);

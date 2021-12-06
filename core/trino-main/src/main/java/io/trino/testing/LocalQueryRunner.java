@@ -101,7 +101,6 @@ import io.trino.operator.TaskContext;
 import io.trino.operator.TrinoOperatorFactories;
 import io.trino.operator.index.IndexJoinLookupStats;
 import io.trino.plugin.base.security.AllowAllSystemAccessControl;
-import io.trino.security.AccessControlConfig;
 import io.trino.security.GroupProviderManager;
 import io.trino.server.PluginManager;
 import io.trino.server.SessionPropertyDefaults;
@@ -279,8 +278,7 @@ public class LocalQueryRunner
             Map<String, List<PropertyMetadata<?>>> defaultSessionProperties,
             PlanOptimizersProvider planOptimizersProvider,
             OperatorFactories operatorFactories,
-            Set<SystemSessionPropertiesProvider> extraSessionProperties,
-            AccessControlConfig accessControlConfig)
+            Set<SystemSessionPropertiesProvider> extraSessionProperties)
     {
         requireNonNull(defaultSession, "defaultSession is null");
         requireNonNull(defaultSessionProperties, "defaultSessionProperties is null");
@@ -338,7 +336,7 @@ public class LocalQueryRunner
         this.costCalculator = new CostCalculatorUsingExchanges(taskCountEstimator);
         this.estimatedExchangesCostCalculator = new CostCalculatorWithEstimatedExchanges(costCalculator, taskCountEstimator);
         this.groupProvider = new TestingGroupProvider();
-        this.accessControl = new TestingAccessControlManager(transactionManager, eventListenerManager, accessControlConfig);
+        this.accessControl = new TestingAccessControlManager(transactionManager, eventListenerManager);
         accessControl.loadSystemAccessControl(AllowAllSystemAccessControl.NAME, ImmutableMap.of());
         this.pageSourceManager = new PageSourceManager();
 
@@ -952,6 +950,7 @@ public class LocalQueryRunner
                 metadata,
                 sqlParser,
                 accessControl,
+                featuresConfig,
                 groupProvider,
                 new StatementRewrite(ImmutableSet.of(
                         new DescribeInputRewrite(sqlParser),
@@ -1034,7 +1033,6 @@ public class LocalQueryRunner
                         nodePartitioningManager,
                         new RuleStatsRecorder()).get();
         private OperatorFactories operatorFactories = new TrinoOperatorFactories();
-        private AccessControlConfig accessControlConfig = new AccessControlConfig();
 
         private Builder(Session defaultSession)
         {
@@ -1062,12 +1060,6 @@ public class LocalQueryRunner
         public Builder withAlwaysRevokeMemory()
         {
             this.alwaysRevokeMemory = true;
-            return this;
-        }
-
-        public Builder withAccessControlConfig(AccessControlConfig config)
-        {
-            this.accessControlConfig = config;
             return this;
         }
 
@@ -1118,8 +1110,7 @@ public class LocalQueryRunner
                     defaultSessionProperties,
                     planOptimizersProvider,
                     operatorFactories,
-                    extraSessionProperties,
-                    accessControlConfig);
+                    extraSessionProperties);
         }
     }
 }

@@ -29,7 +29,6 @@ public class AccessControlConfig
 {
     private static final Splitter SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
     private List<File> accessControlFiles = ImmutableList.of();
-    private boolean hideInaccesibleColumns;
 
     @NotNull
     public List<@FileExists File> getAccessControlFiles()
@@ -49,19 +48,6 @@ public class AccessControlConfig
     public AccessControlConfig setAccessControlFiles(List<File> accessControlFiles)
     {
         this.accessControlFiles = ImmutableList.copyOf(accessControlFiles);
-        return this;
-    }
-
-    @NotNull
-    public boolean isHideInaccesibleColumns()
-    {
-        return hideInaccesibleColumns;
-    }
-
-    @Config("access-control.hide-inaccessible-columns")
-    public AccessControlConfig setHideInaccesibleColumns(boolean hideInaccesibleColumns)
-    {
-        this.hideInaccesibleColumns = hideInaccesibleColumns;
         return this;
     }
 }

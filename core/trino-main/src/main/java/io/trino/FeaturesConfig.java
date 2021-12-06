@@ -147,6 +147,8 @@ public class FeaturesConfig
     private boolean disableSetPropertiesSecurityCheckForCreateDdl;
     private boolean incrementalHashArrayLoadFactorEnabled = true;
 
+    private boolean hideInaccesibleColumns;
+
     public enum JoinReorderingStrategy
     {
         NONE,
@@ -1134,6 +1136,20 @@ public class FeaturesConfig
     public FeaturesConfig setIncrementalHashArrayLoadFactorEnabled(boolean incrementalHashArrayLoadFactorEnabled)
     {
         this.incrementalHashArrayLoadFactorEnabled = incrementalHashArrayLoadFactorEnabled;
+        return this;
+    }
+
+    @NotNull
+    public boolean isHideInaccesibleColumns()
+    {
+        return hideInaccesibleColumns;
+    }
+
+    @Config("hide-inaccessible-columns")
+    @ConfigDescription("Experimental: if enable columns filtered by access control are ignored in select * statement")
+    public FeaturesConfig setHideInaccesibleColumns(boolean hideInaccesibleColumns)
+    {
+        this.hideInaccesibleColumns = hideInaccesibleColumns;
         return this;
     }
 }

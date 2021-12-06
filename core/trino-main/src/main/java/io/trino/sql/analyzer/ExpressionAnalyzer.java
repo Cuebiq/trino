@@ -37,7 +37,6 @@ import io.trino.spi.TrinoException;
 import io.trino.spi.TrinoWarning;
 import io.trino.spi.function.OperatorType;
 import io.trino.spi.security.GroupProvider;
-import io.trino.spi.security.Identity;
 import io.trino.spi.type.CharType;
 import io.trino.spi.type.DateType;
 import io.trino.spi.type.DecimalParseResult;
@@ -2740,10 +2739,37 @@ public class ExpressionAnalyzer
             WarningCollector warningCollector,
             CorrelationSupport correlationSupport)
     {
+        return analyzeExpression(
+                session,
+                metadata,
+                groupProvider,
+                accessControl,
+                sqlParser,
+                scope,
+                analysis,
+                expression,
+                warningCollector,
+                correlationSupport,
+                false);
+    }
+
+    public static ExpressionAnalysis analyzeExpression(
+            Session session,
+            Metadata metadata,
+            GroupProvider groupProvider,
+            AccessControl accessControl,
+            SqlParser sqlParser,
+            Scope scope,
+            Analysis analysis,
+            Expression expression,
+            WarningCollector warningCollector,
+            CorrelationSupport correlationSupport,
+            boolean filterReferences)
+    {
         ExpressionAnalyzer analyzer = create(analysis, session, metadata, sqlParser, groupProvider, accessControl, TypeProvider.empty(), warningCollector);
         analyzer.analyze(expression, scope, correlationSupport);
 
-        updateAnalysis(analysis, analyzer, session, accessControl);
+        updateAnalysis(analysis, analyzer, session, accessControl, filterReferences);
         analysis.addExpressionFields(expression, analyzer.getSourceFields());
 
         return new ExpressionAnalysis(
@@ -2790,6 +2816,11 @@ public class ExpressionAnalyzer
 
     private static void updateAnalysis(Analysis analysis, ExpressionAnalyzer analyzer, Session session, AccessControl accessControl)
     {
+        updateAnalysis(analysis, analyzer, session, accessControl, false);
+    }
+
+    private static void updateAnalysis(Analysis analysis, ExpressionAnalyzer analyzer, Session session, AccessControl accessControl, boolean filterReferences)
+    {
         analysis.addTypes(analyzer.getExpressionTypes());
         analysis.addCoercions(
                 analyzer.getExpressionCoercions(),
@@ -2801,7 +2832,12 @@ public class ExpressionAnalyzer
                 .forEach(entry -> analysis.addResolvedFunction(entry.getKey().getNode(), entry.getValue(), session.getUser()));
         analysis.addColumnReferences(analyzer.getColumnReferences());
         analysis.addLambdaArgumentReferences(analyzer.getLambdaArgumentReferences());
-        addTableColumnReferences(analysis, accessControl, session.getIdentity(), analyzer.getTableColumnReferences());
+        if (filterReferences) {
+            analysis.addFilteredTableColumnReferences(accessControl, session.getIdentity(), analyzer.getTableColumnReferences());
+        }
+        else {
+            analysis.addTableColumnReferences(accessControl, session.getIdentity(), analyzer.getTableColumnReferences());
+        }
         analysis.addLabelDereferences(analyzer.getLabelDereferences());
         analysis.addPatternRecognitionFunctions(analyzer.getPatternRecognitionFunctions());
         analysis.setRanges(analyzer.getRanges());
@@ -2809,25 +2845,6 @@ public class ExpressionAnalyzer
         analysis.setMeasureDefinitions(analyzer.getMeasureDefinitions());
         analysis.setPatternAggregations(analyzer.getPatternAggregations());
         analysis.addPredicateCoercions(analyzer.getPredicateCoercions());
-    }
-
-    private static void addTableColumnReferences(Analysis analysis, AccessControl accessControl, Identity identity, Multimap<QualifiedObjectName, String> tableColumnMap)
-    {
-        Multimap<QualifiedObjectName, String> referencesInStatement = HashMultimap.create();
-        Multimap<QualifiedObjectName, String> rowFilterReferences = HashMultimap.create();
-        tableColumnMap.asMap()
-                .forEach((key, value) -> {
-                    //Allow to create a rowfilter on a not accessibile column
-                    if (analysis.hasRowFilter(key, identity.getUser())) {
-                        value.forEach(s -> rowFilterReferences.put(key, s));
-                    }
-                    else {
-                        value.forEach(s -> referencesInStatement.put(key, s));
-                    }
-                });
-
-        analysis.addTableColumnReferences(accessControl, identity, referencesInStatement);
-        analysis.addFilteredTableColumnReferences(accessControl, identity, rowFilterReferences);
     }
 
     public static ExpressionAnalyzer create(

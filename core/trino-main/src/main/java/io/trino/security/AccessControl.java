@@ -245,14 +245,6 @@ public interface AccessControl
     Set<String> filterColumns(SecurityContext context, CatalogSchemaTableName tableName, Set<String> columns);
 
     /**
-     * Filter the list of columns to those visible to the identity if access-control.hide-inaccessible-columns = true
-     */
-    default Set<String> filterInaccessibleColumns(SecurityContext securityContext, CatalogSchemaTableName table, Set<String> columns)
-    {
-        return columns;
-    }
-
-    /**
      * Check if identity is allowed to add columns to the specified table.
      *
      * @throws AccessDeniedException if not allowed
