@@ -324,8 +324,6 @@ class StatementAnalyzer
     private final WarningCollector warningCollector;
     private final CorrelationSupport correlationSupport;
 
-    static boolean isHideInaccessibleColumns;
-
     public StatementAnalyzer(
             Analysis analysis,
             Metadata metadata,
@@ -3206,8 +3204,7 @@ class StatementAnalyzer
 
         public Set<String> filterInaccessibleColumns(SecurityContext securityContext, CatalogSchemaTableName table, Set<String> columns)
         {
-            //TODO: fix static configuration
-            if (!isHideInaccessibleColumns) {
+            if (!metadata.isHideInaccesibleColumns()) {
                 return columns;
             }
 
