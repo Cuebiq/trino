@@ -38,6 +38,7 @@ import io.trino.metadata.TableMetadata;
 import io.trino.metadata.TableSchema;
 import io.trino.security.AccessControl;
 import io.trino.security.AllowAllAccessControl;
+import io.trino.security.SecurityContext;
 import io.trino.security.ViewAccessControl;
 import io.trino.spi.TrinoException;
 import io.trino.spi.TrinoWarning;
@@ -1478,9 +1479,9 @@ class StatementAnalyzer
                     translateMaterializedViewColumns(view.getColumns()));
         }
 
-        private List<ViewColumn> translateMaterializedViewColumns(List<ConnectorMaterializedViewDefinition.Column> materializedViewColumns)
+        private List<ConnectorViewDefinition.ViewColumn> translateMaterializedViewColumns(List<ConnectorMaterializedViewDefinition.Column> materializedViewColumns)
         {
-            List<ViewColumn> viewColumns = new ArrayList<>();
+            List<ConnectorViewDefinition.ViewColumn> viewColumns = new ArrayList<>();
             for (ConnectorMaterializedViewDefinition.Column column : materializedViewColumns) {
                 viewColumns.add(new ViewColumn(column.getName(), column.getType()));
             }
@@ -1503,7 +1504,7 @@ class StatementAnalyzer
                 Optional<String> catalog,
                 Optional<String> schema,
                 Optional<String> owner,
-                List<ViewColumn> columns)
+                List<ConnectorViewDefinition.ViewColumn> columns)
         {
             Statement statement = analysis.getStatement();
             if (statement instanceof CreateView) {
@@ -3011,17 +3012,24 @@ class StatementAnalyzer
 
         private List<Field> filterInaccessibleFields(List<Field> fields)
         {
-            ImmutableList<Field> authorizedFields = fields.stream()
+            return fields.stream()
                     .filter(field ->
                             field.getOriginColumnName().isEmpty() ||
                                     field.getOriginTable().isEmpty() ||
-                                    field.isHidden() ||
-                                    !accessControl.filterColumns(
-                                                    session.toSecurityContext(),
-                                                    field.getOriginTable().get().asCatalogSchemaTableName(),
-                                                    Set.of(field.getOriginColumnName().get()))
+                                    !filterInaccessibleColumns(
+                                            session.toSecurityContext(),
+                                            field.getOriginTable().get().asCatalogSchemaTableName(),
+                                            Set.of(field.getOriginColumnName().get()))
                                             .isEmpty()).collect(toImmutableList());
-            return authorizedFields;
+        }
+
+        public Set<String> filterInaccessibleColumns(SecurityContext securityContext, CatalogSchemaTableName table, Set<String> columns)
+        {
+//            if (!isHideInaccesibleColumns()) {
+//                return columns;
+//            }
+
+            return accessControl.filterColumns(securityContext, table, columns);
         }
 
         private void analyzeAllColumnsFromTable(
