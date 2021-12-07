@@ -2739,37 +2739,10 @@ public class ExpressionAnalyzer
             WarningCollector warningCollector,
             CorrelationSupport correlationSupport)
     {
-        return analyzeExpression(
-                session,
-                metadata,
-                groupProvider,
-                accessControl,
-                sqlParser,
-                scope,
-                analysis,
-                expression,
-                warningCollector,
-                correlationSupport,
-                false);
-    }
-
-    public static ExpressionAnalysis analyzeExpression(
-            Session session,
-            Metadata metadata,
-            GroupProvider groupProvider,
-            AccessControl accessControl,
-            SqlParser sqlParser,
-            Scope scope,
-            Analysis analysis,
-            Expression expression,
-            WarningCollector warningCollector,
-            CorrelationSupport correlationSupport,
-            boolean filterReferences)
-    {
         ExpressionAnalyzer analyzer = create(analysis, session, metadata, sqlParser, groupProvider, accessControl, TypeProvider.empty(), warningCollector);
         analyzer.analyze(expression, scope, correlationSupport);
 
-        updateAnalysis(analysis, analyzer, session, accessControl, filterReferences);
+        updateAnalysis(analysis, analyzer, session, accessControl);
         analysis.addExpressionFields(expression, analyzer.getSourceFields());
 
         return new ExpressionAnalysis(
@@ -2816,11 +2789,6 @@ public class ExpressionAnalyzer
 
     private static void updateAnalysis(Analysis analysis, ExpressionAnalyzer analyzer, Session session, AccessControl accessControl)
     {
-        updateAnalysis(analysis, analyzer, session, accessControl, false);
-    }
-
-    private static void updateAnalysis(Analysis analysis, ExpressionAnalyzer analyzer, Session session, AccessControl accessControl, boolean filterReferences)
-    {
         analysis.addTypes(analyzer.getExpressionTypes());
         analysis.addCoercions(
                 analyzer.getExpressionCoercions(),
@@ -2832,12 +2800,7 @@ public class ExpressionAnalyzer
                 .forEach(entry -> analysis.addResolvedFunction(entry.getKey().getNode(), entry.getValue(), session.getUser()));
         analysis.addColumnReferences(analyzer.getColumnReferences());
         analysis.addLambdaArgumentReferences(analyzer.getLambdaArgumentReferences());
-        if (filterReferences) {
-            analysis.addFilteredTableColumnReferences(accessControl, session.getIdentity(), analyzer.getTableColumnReferences());
-        }
-        else {
-            analysis.addTableColumnReferences(accessControl, session.getIdentity(), analyzer.getTableColumnReferences());
-        }
+        analysis.addTableColumnReferences(accessControl, session.getIdentity(), analyzer.getTableColumnReferences());
         analysis.addLabelDereferences(analyzer.getLabelDereferences());
         analysis.addPatternRecognitionFunctions(analyzer.getPatternRecognitionFunctions());
         analysis.setRanges(analyzer.getRanges());

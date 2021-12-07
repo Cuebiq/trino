@@ -231,7 +231,6 @@ public final class MetadataManager
 
     private final Cache<OperatorCacheKey, ResolvedFunction> operatorCache;
     private final Cache<CoercionCacheKey, ResolvedFunction> coercionCache;
-    private final boolean hideInaccesibleColumns;
 
     @Inject
     public MetadataManager(
@@ -266,7 +265,6 @@ public final class MetadataManager
         this.systemSecurityMetadata = requireNonNull(systemSecurityMetadata, "systemSecurityMetadata is null");
         this.transactionManager = requireNonNull(transactionManager, "transactionManager is null");
         this.typeOperators = requireNonNull(typeOperators, "typeOperators is null");
-        this.hideInaccesibleColumns = requireNonNull(featuresConfig, "typeOperators is null").isHideInaccesibleColumns();
 
         // add the built-in BlockEncodings
         addBlockEncoding(new VariableWidthBlockEncoding());
@@ -920,12 +918,6 @@ public final class MetadataManager
         CatalogName catalogName = tableHandle.getCatalogName();
         ConnectorMetadata metadata = getMetadataForWrite(session, catalogName);
         metadata.dropColumn(session.toConnectorSession(catalogName), tableHandle.getConnectorHandle(), column);
-    }
-
-    @Override
-    public boolean isHideInaccesibleColumns()
-    {
-        return hideInaccesibleColumns;
     }
 
     @Override

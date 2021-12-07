@@ -324,6 +324,18 @@ class StatementAnalyzer
     private final WarningCollector warningCollector;
     private final CorrelationSupport correlationSupport;
 
+    private static boolean hideInaccesibleColumns;
+
+    public static boolean isHideInaccesibleColumns()
+    {
+        return StatementAnalyzer.hideInaccesibleColumns;
+    }
+
+    public static void setHideInaccesibleColumns(boolean hideInaccesibleColumns)
+    {
+        StatementAnalyzer.hideInaccesibleColumns = hideInaccesibleColumns;
+    }
+
     public StatementAnalyzer(
             Analysis analysis,
             Metadata metadata,
@@ -3204,7 +3216,7 @@ class StatementAnalyzer
 
         public Set<String> filterInaccessibleColumns(SecurityContext securityContext, CatalogSchemaTableName table, Set<String> columns)
         {
-            if (!metadata.isHideInaccesibleColumns()) {
+            if (!isHideInaccesibleColumns()) {
                 return columns;
             }
 
@@ -3563,8 +3575,7 @@ class StatementAnalyzer
                         analysis,
                         expression,
                         warningCollector,
-                        correlationSupport,
-                        metadata.isHideInaccesibleColumns());
+                        correlationSupport);
             }
             catch (TrinoException e) {
                 throw new TrinoException(e::getErrorCode, extractLocation(table), format("Invalid row filter for '%s': %s", name, e.getRawMessage()), e);
@@ -3620,8 +3631,7 @@ class StatementAnalyzer
                         analysis,
                         expression,
                         warningCollector,
-                        correlationSupport,
-                        metadata.isHideInaccesibleColumns());
+                        correlationSupport);
             }
             catch (TrinoException e) {
                 throw new TrinoException(e::getErrorCode, extractLocation(table), format("Invalid column mask for '%s.%s': %s", tableName, column, e.getRawMessage()), e);

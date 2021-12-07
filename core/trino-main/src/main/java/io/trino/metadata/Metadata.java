@@ -247,14 +247,6 @@ public interface Metadata
     void dropColumn(Session session, TableHandle tableHandle, ColumnHandle column);
 
     /**
-     * Return true if columns must be hidden if inaccessible, default value is false
-     */
-    default boolean isHideInaccesibleColumns()
-    {
-        return false;
-    }
-
-    /**
      * Drops the specified table
      *
      * @throws RuntimeException if the table cannot be dropped or table handle is no longer valid

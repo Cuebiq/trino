@@ -13,6 +13,7 @@
  */
 package io.trino.sql.analyzer;
 
+import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
@@ -40,6 +41,22 @@ public class AnalyzerFactory
     private final StatementRewrite statementRewrite;
 
     @Inject
+    public AnalyzerFactory(
+            Metadata metadata,
+            SqlParser sqlParser,
+            AccessControl accessControl,
+            FeaturesConfig featuresConfig,
+            GroupProvider groupProvider,
+            StatementRewrite statementRewrite)
+    {
+        this.metadata = requireNonNull(metadata, "metadata is null");
+        this.sqlParser = requireNonNull(sqlParser, "sqlParser is null");
+        this.accessControl = requireNonNull(accessControl, "accessControl is null");
+        this.groupProvider = requireNonNull(groupProvider, "groupProvider is null");
+        this.statementRewrite = requireNonNull(statementRewrite, "statementRewrite is null");
+        StatementAnalyzer.setHideInaccesibleColumns(requireNonNull(featuresConfig, "featuresConfig is null").isHideInaccesibleColumns());
+    }
+
     public AnalyzerFactory(
             Metadata metadata,
             SqlParser sqlParser,

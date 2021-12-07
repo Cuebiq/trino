@@ -1145,8 +1145,8 @@ public class FeaturesConfig
         return hideInaccesibleColumns;
     }
 
-    @Config("experimental.hide-inaccessible-columns")
-    @ConfigDescription("Experimental: if enable columns filtered by access control are ignored in select * statement")
+    @Config("hide-inaccessible-columns")
+    @ConfigDescription("When enabled non accessible columns will be filtered in SELECT * statement")
     public FeaturesConfig setHideInaccesibleColumns(boolean hideInaccesibleColumns)
     {
         this.hideInaccesibleColumns = hideInaccesibleColumns;
