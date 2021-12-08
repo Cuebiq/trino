@@ -20,6 +20,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
 import io.trino.Session;
 import io.trino.connector.CatalogName;
@@ -42,7 +44,6 @@ import io.trino.metadata.ViewColumn;
 import io.trino.metadata.ViewDefinition;
 import io.trino.security.AccessControl;
 import io.trino.security.AllowAllAccessControl;
-import io.trino.security.SecurityContext;
 import io.trino.security.ViewAccessControl;
 import io.trino.spi.TrinoException;
 import io.trino.spi.TrinoWarning;
@@ -205,6 +206,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -322,18 +324,6 @@ class StatementAnalyzer
     private final AccessControl accessControl;
     private final WarningCollector warningCollector;
     private final CorrelationSupport correlationSupport;
-
-    private static boolean hideInaccesibleColumns;
-
-    public static boolean isHideInaccesibleColumns()
-    {
-        return StatementAnalyzer.hideInaccesibleColumns;
-    }
-
-    public static void setHideInaccesibleColumns(boolean hideInaccesibleColumns)
-    {
-        StatementAnalyzer.hideInaccesibleColumns = hideInaccesibleColumns;
-    }
 
     public StatementAnalyzer(
             Analysis analysis,
@@ -3202,24 +3192,28 @@ class StatementAnalyzer
 
         private List<Field> filterInaccessibleFields(List<Field> fields)
         {
-            return fields.stream()
-                    .filter(field ->
-                                field.getOriginColumnName().isEmpty() ||
-                                field.getOriginTable().isEmpty() ||
-                                !filterInaccessibleColumns(
-                                                session.toSecurityContext(),
-                                                field.getOriginTable().get().asCatalogSchemaTableName(),
-                                                Set.of(field.getOriginColumnName().get()))
-                                        .isEmpty()).collect(toImmutableList());
-        }
-
-        public Set<String> filterInaccessibleColumns(SecurityContext securityContext, CatalogSchemaTableName table, Set<String> columns)
-        {
-            if (!isHideInaccesibleColumns()) {
-                return columns;
+            if (!analysis.isHideInaccesibleColumns()) {
+                return fields;
             }
+            //collect fields by table
+            ListMultimap<QualifiedObjectName, Field> tableFieldsMap = Multimaps.newListMultimap(new HashMap<QualifiedObjectName, Collection<Field>>(), () -> new LinkedList<>());
+            fields.forEach(field -> tableFieldsMap.put(field.getOriginTable().get(), field));
 
-            return accessControl.filterColumns(securityContext, table, columns);
+            List<Field> accessibleFields = new ArrayList<>();
+
+            tableFieldsMap.asMap().forEach((table, tableFields) -> {
+                Set<String> accessibleColumns =
+                        accessControl.filterColumns(
+                                session.toSecurityContext(),
+                                table.asCatalogSchemaTableName(),
+                                tableFields.stream().map(field -> field.getOriginColumnName().get()).collect(Collectors.toSet()));
+                accessibleFields.addAll(tableFields.stream()
+                        .filter(field -> accessibleColumns.contains(field.getOriginColumnName().get()))
+                        .collect(Collectors.toList()));
+            });
+
+            //filter at the end for preserving the global order
+            return fields.stream().filter(field -> accessibleFields.contains(field)).collect(Collectors.toList());
         }
 
         private void analyzeAllColumnsFromTable(

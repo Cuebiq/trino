@@ -24,6 +24,7 @@ import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.TestingAccessControlManager;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.Optional;
@@ -40,7 +41,7 @@ public class TestFilterInaccessibleColumns
 {
     private static final String CATALOG = "local";
     private static final String USER = "user";
-    private static final String SUPER_USER = "super-user";
+    private static final String ADMIN = "admin";
 
     private static final Session SESSION = testSessionBuilder()
             .setCatalog(CATALOG)
@@ -70,17 +71,25 @@ public class TestFilterInaccessibleColumns
         assertions = null;
     }
 
+    @BeforeMethod
+    public void beforeMethod()
+    {
+        accessControl.reset();
+    }
+
+    @Test
+    public void testBaseline()
+    {
+        // No filtering baseline
+        assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
+                .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3', CAST('refully final requests. regular, ironi' AS VARCHAR(152)))");
+    }
+
     @Test
     public void testSimpleTableSchemaFilter()
     {
-        // No filtering baseline
-        accessControl.reset();
-        assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
-                .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3', CAST('refully final requests. regular, ironi' AS VARCHAR(152)))");
-
         // Modify the filter to remove the comment, validate that comment is no longer present in the result
-        accessControl.reset();
-        accessControl.deny(privilege("nation.comment", SELECT_COLUMN));
+        accessControl.deny(privilege(USER, "nation.comment", SELECT_COLUMN));
         assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3')");
     }
@@ -88,7 +97,6 @@ public class TestFilterInaccessibleColumns
     @Test
     public void testDescribe()
     {
-        accessControl.reset();
         assertThat(assertions.query("DESCRIBE nation"))
                 .matches(materializedRows -> materializedRows
                         .getMaterializedRows().stream()
@@ -96,7 +104,7 @@ public class TestFilterInaccessibleColumns
                         .findFirst()
                         .isPresent());
 
-        accessControl.deny(privilege("nation.comment", SELECT_COLUMN));
+        accessControl.deny(privilege(USER, "nation.comment", SELECT_COLUMN));
         assertThat(assertions.query("DESCRIBE nation"))
                 .matches(materializedRows -> materializedRows
                         .getMaterializedRows().stream()
@@ -108,7 +116,6 @@ public class TestFilterInaccessibleColumns
     @Test
     public void testShowColumns()
     {
-        accessControl.reset();
         assertThat(assertions.query("SHOW COLUMNS FROM nation"))
                 .matches(materializedRows -> materializedRows
                         .getMaterializedRows().stream()
@@ -132,15 +139,28 @@ public class TestFilterInaccessibleColumns
     public void testFilterExplicitSelect()
     {
         // Select the columns that are available to us explicitly
-        accessControl.reset();
-        accessControl.deny(privilege("nation.comment", SELECT_COLUMN));
+        accessControl.deny(privilege(USER, "nation.comment", SELECT_COLUMN));
         assertThat(assertions.query("SELECT nationkey, name, regionkey FROM nation WHERE name = 'FRANCE'"))
                 .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3')");
 
         // Select all columns explicitly
-        accessControl.reset();
-        accessControl.deny(privilege("nation.comment", SELECT_COLUMN));
         assertThatThrownBy(() -> assertions.query("SELECT nationkey, name, regionkey, comment FROM nation WHERE name = 'FRANCE'"))
+                .hasMessage("Access Denied: Cannot select from columns [nationkey, regionkey, name, comment] in table or view local.tiny.nation");
+    }
+
+    @Test
+    public void testRowFilterOnNotAccessibleColumnKO()
+    {
+        // No filtering baseline
+        assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
+                .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3', CAST('refully final requests. regular, ironi' AS VARCHAR(152)))");
+
+        // Filter with the same user identity, check that not bypass access-control
+        accessControl.rowFilter(new QualifiedObjectName(CATALOG, TINY_SCHEMA_NAME, "nation"),
+                USER,
+                new ViewExpression(USER, Optional.of(CATALOG), Optional.of(TINY_SCHEMA_NAME), "comment IS NOT null"));
+        accessControl.deny(privilege(USER, "nation.comment", SELECT_COLUMN));
+        assertThatThrownBy(() -> assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .hasMessage("Access Denied: Cannot select from columns [nationkey, regionkey, name, comment] in table or view local.tiny.nation");
     }
 
@@ -148,24 +168,13 @@ public class TestFilterInaccessibleColumns
     public void testRowFilterOnNotAccessibleColumn()
     {
         // No filtering baseline
-        accessControl.reset();
         assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3', CAST('refully final requests. regular, ironi' AS VARCHAR(152)))");
 
-        // Filter with the same user identity, check that not bypass access-control
-        accessControl.reset();
-        accessControl.rowFilter(new QualifiedObjectName(CATALOG, TINY_SCHEMA_NAME, "nation"),
-                USER,
-                new ViewExpression(USER, Optional.of(CATALOG), Optional.of(TINY_SCHEMA_NAME), "comment IS NOT null"));
-        accessControl.deny(privilege(USER, "nation.comment", SELECT_COLUMN));
-        assertThatThrownBy(() -> assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
-                .hasMessage("Access Denied: Cannot select from columns [nationkey, regionkey, name, comment] in table or view local.tiny.nation");
-
         // Modify the filter to remove the comment, validate that comment is no longer present in the result
-        accessControl.reset();
         accessControl.rowFilter(new QualifiedObjectName(CATALOG, TINY_SCHEMA_NAME, "nation"),
                 USER,
-                new ViewExpression(SUPER_USER, Optional.of(CATALOG), Optional.of(TINY_SCHEMA_NAME), "comment IS NOT null"));
+                new ViewExpression(ADMIN, Optional.of(CATALOG), Optional.of(TINY_SCHEMA_NAME), "comment IS NOT null"));
         accessControl.deny(privilege(USER, "nation.comment", SELECT_COLUMN));
         assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3')");
@@ -175,30 +184,26 @@ public class TestFilterInaccessibleColumns
     public void testMaskingOnAccessibleColumn()
     {
         // No filtering baseline
-        accessControl.reset();
         assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3', CAST('refully final requests. regular, ironi' AS VARCHAR(152)))");
 
         // Modify the filter to remove the comment, validate that comment is no longer present in the result
-        accessControl.reset();
         accessControl.columnMask(new QualifiedObjectName(CATALOG, TINY_SCHEMA_NAME, "nation"),
                 "nationkey",
                 USER,
-                new ViewExpression(SUPER_USER, Optional.of(CATALOG), Optional.of(TINY_SCHEMA_NAME), "-nationkey"));
+                new ViewExpression(ADMIN, Optional.of(CATALOG), Optional.of(TINY_SCHEMA_NAME), "-nationkey"));
         assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .matches("VALUES (BIGINT '-6',CAST('FRANCE' AS VARCHAR(25)), BIGINT '3', CAST('refully final requests. regular, ironi' AS VARCHAR(152)))");
     }
 
     @Test
-    public void testMaskingWithCaseOnNotAccessibleColumn()
+    public void testMaskingWithCaseOnNotAccessibleColumnKO()
     {
         // No filtering baseline
-        accessControl.reset();
         assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3', CAST('refully final requests. regular, ironi' AS VARCHAR(152)))");
 
         // masking with the same user identity, check that not bypass access-control
-        accessControl.reset();
         accessControl.deny(privilege(USER, "nation.nationkey", SELECT_COLUMN));
         accessControl.columnMask(new QualifiedObjectName(CATALOG, TINY_SCHEMA_NAME, "nation"),
                 "comment",
@@ -207,14 +212,21 @@ public class TestFilterInaccessibleColumns
 
         assertThatThrownBy(() -> assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .hasMessage("Access Denied: Cannot select from columns [nationkey, regionkey, name, comment] in table or view local.tiny.nation");
+    }
+
+    @Test
+    public void testMaskingWithCaseOnNotAccessibleColumn()
+    {
+        // No filtering baseline
+        assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
+                .matches("VALUES (BIGINT '6', CAST('FRANCE' AS VARCHAR(25)), BIGINT '3', CAST('refully final requests. regular, ironi' AS VARCHAR(152)))");
 
         // Modify the filter to remove the comment, validate that comment is no longer present in the result
-        accessControl.reset();
         accessControl.deny(privilege(USER, "nation.nationkey", SELECT_COLUMN));
         accessControl.columnMask(new QualifiedObjectName(CATALOG, TINY_SCHEMA_NAME, "nation"),
                 "comment",
                 USER,
-                new ViewExpression(SUPER_USER, Optional.of(CATALOG), Optional.of(TINY_SCHEMA_NAME), "CASE nationkey WHEN 6 THEN 'masked-comment' ELSE comment END"));
+                new ViewExpression(ADMIN, Optional.of(CATALOG), Optional.of(TINY_SCHEMA_NAME), "CASE nationkey WHEN 6 THEN 'masked-comment' ELSE comment END"));
 
         assertThat(assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .matches("VALUES (CAST('FRANCE' AS VARCHAR(25)), BIGINT '3', CAST('masked-comment' AS VARCHAR(152)))");
@@ -227,8 +239,7 @@ public class TestFilterInaccessibleColumns
     public void testPredicateOnInaccessibleColumn()
     {
         // Hide name but use it in the query predicate
-        accessControl.reset();
-        accessControl.deny(privilege("nation.name", SELECT_COLUMN));
+        accessControl.deny(privilege(USER, "nation.name", SELECT_COLUMN));
         assertThatThrownBy(() -> assertions.query("SELECT * FROM nation WHERE name = 'FRANCE'"))
                 .hasMessage("Access Denied: Cannot select from columns [nationkey, regionkey, name, comment] in table or view local.tiny.nation");
     }

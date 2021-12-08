@@ -39,6 +39,7 @@ public class AnalyzerFactory
     private final AccessControl accessControl;
     private final GroupProvider groupProvider;
     private final StatementRewrite statementRewrite;
+    private boolean hideInaccesibleColumns;
 
     @Inject
     public AnalyzerFactory(
@@ -54,21 +55,7 @@ public class AnalyzerFactory
         this.accessControl = requireNonNull(accessControl, "accessControl is null");
         this.groupProvider = requireNonNull(groupProvider, "groupProvider is null");
         this.statementRewrite = requireNonNull(statementRewrite, "statementRewrite is null");
-        StatementAnalyzer.setHideInaccesibleColumns(requireNonNull(featuresConfig, "featuresConfig is null").isHideInaccesibleColumns());
-    }
-
-    public AnalyzerFactory(
-            Metadata metadata,
-            SqlParser sqlParser,
-            AccessControl accessControl,
-            GroupProvider groupProvider,
-            StatementRewrite statementRewrite)
-    {
-        this.metadata = requireNonNull(metadata, "metadata is null");
-        this.sqlParser = requireNonNull(sqlParser, "sqlParser is null");
-        this.accessControl = requireNonNull(accessControl, "accessControl is null");
-        this.groupProvider = requireNonNull(groupProvider, "groupProvider is null");
-        this.statementRewrite = requireNonNull(statementRewrite, "statementRewrite is null");
+        this.hideInaccesibleColumns = requireNonNull(featuresConfig, "featuresConfig is null").isHideInaccesibleColumns();
     }
 
     public Analyzer createAnalyzer(
@@ -87,6 +74,7 @@ public class AnalyzerFactory
                 parameters,
                 parameterLookup,
                 warningCollector,
-                statementRewrite);
+                statementRewrite,
+                hideInaccesibleColumns);
     }
 }

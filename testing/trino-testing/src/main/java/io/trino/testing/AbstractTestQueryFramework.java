@@ -499,6 +499,7 @@ public abstract class AbstractTestQueryFramework
                 metadata,
                 sqlParser,
                 queryRunner.getAccessControl(),
+                featuresConfig,
                 queryRunner.getGroupProvider(),
                 new StatementRewrite(ImmutableSet.of(
                         new DescribeInputRewrite(sqlParser),

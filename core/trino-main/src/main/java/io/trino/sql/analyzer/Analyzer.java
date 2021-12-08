@@ -53,6 +53,7 @@ public class Analyzer
     private final Map<NodeRef<Parameter>, Expression> parameterLookup;
     private final WarningCollector warningCollector;
     private final StatementRewrite statementRewrite;
+    private boolean hideInaccesibleColumns;
 
     Analyzer(
             Session session,
@@ -64,7 +65,8 @@ public class Analyzer
             List<Expression> parameters,
             Map<NodeRef<Parameter>, Expression> parameterLookup,
             WarningCollector warningCollector,
-            StatementRewrite statementRewrite)
+            StatementRewrite statementRewrite,
+            boolean hideInaccesibleColumns)
     {
         this.session = requireNonNull(session, "session is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
@@ -76,6 +78,7 @@ public class Analyzer
         this.parameterLookup = parameterLookup;
         this.warningCollector = requireNonNull(warningCollector, "warningCollector is null");
         this.statementRewrite = requireNonNull(statementRewrite, "statementRewrite is null");
+        this.hideInaccesibleColumns = hideInaccesibleColumns;
     }
 
     public Analysis analyze(Statement statement)
@@ -86,7 +89,7 @@ public class Analyzer
     public Analysis analyze(Statement statement, QueryType queryType)
     {
         Statement rewrittenStatement = statementRewrite.rewrite(analyzerFactory, session, statement, parameters, parameterLookup, warningCollector);
-        Analysis analysis = new Analysis(rewrittenStatement, parameterLookup, queryType);
+        Analysis analysis = new Analysis(rewrittenStatement, parameterLookup, queryType, hideInaccesibleColumns);
         StatementAnalyzer analyzer = new StatementAnalyzer(analysis, metadata, sqlParser, groupProvider, accessControl, session, warningCollector, CorrelationSupport.ALLOWED);
         analyzer.analyze(rewrittenStatement, Optional.empty());
 

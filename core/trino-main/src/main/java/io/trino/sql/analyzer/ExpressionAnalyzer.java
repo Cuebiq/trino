@@ -2705,7 +2705,7 @@ public class ExpressionAnalyzer
             WarningCollector warningCollector,
             QueryType queryType)
     {
-        Analysis analysis = new Analysis(null, parameters, queryType);
+        Analysis analysis = new Analysis(null, parameters, queryType, false);
         ExpressionAnalyzer analyzer = create(analysis, session, metadata, sqlParser, groupProvider, accessControl, types, warningCollector);
         for (Expression expression : expressions) {
             analyzer.analyze(

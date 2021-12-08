@@ -1111,14 +1111,13 @@ public class FeaturesConfig
         return this;
     }
 
-    @NotNull
     public boolean isHideInaccesibleColumns()
     {
         return hideInaccesibleColumns;
     }
 
     @Config("hide-inaccessible-columns")
-    @ConfigDescription("When enabled non accessible columns will be filtered in SELECT * statement")
+    @ConfigDescription("When enabled non accessible columns will be filtered from SELECT * statement")
     public FeaturesConfig setHideInaccesibleColumns(boolean hideInaccesibleColumns)
     {
         this.hideInaccesibleColumns = hideInaccesibleColumns;
