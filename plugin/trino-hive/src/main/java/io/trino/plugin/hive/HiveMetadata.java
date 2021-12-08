@@ -141,7 +141,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -905,7 +904,7 @@ public class HiveMetadata
         HiveStorageFormat hiveStorageFormat = getHiveStorageFormat(tableMetadata.getProperties());
         ImmutableMap.Builder<String, String> tableProperties = ImmutableMap.builder();
 
-        // When metastore is configured with metastore.create.as.acid=true, it will also change Presto-created tables
+        // When metastore is configured with metastore.create.as.acid=true, it will also change Trino-created tables
         // behind the scenes. In particular, this won't work with CTAS.
         // TODO (https://github.com/trinodb/trino/issues/1956) convert this into normal table property
 
@@ -2442,12 +2441,6 @@ public class HiveMetadata
         }
         // it is too expensive to determine the exact number of deleted rows
         return OptionalLong.empty();
-    }
-
-    @VisibleForTesting
-    static Predicate<Map<ColumnHandle, NullableValue>> convertToPredicate(TupleDomain<ColumnHandle> tupleDomain)
-    {
-        return bindings -> tupleDomain.contains(TupleDomain.fromFixedValues(bindings));
     }
 
     @Override

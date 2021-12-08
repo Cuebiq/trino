@@ -11,12 +11,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.operator.aggregation.minmaxby;
+package io.trino.operator.aggregation;
 
-public interface ObjectAndBlockPositionValueState
-        extends KeyAndBlockPositionValueState
+import io.trino.operator.aggregation.state.InitialBooleanValue;
+import io.trino.spi.function.AccumulatorState;
+
+public interface LongLongState
+        extends AccumulatorState
 {
-    Object getFirst();
+    long getFirst();
 
-    void setFirst(Object first);
+    void setFirst(long first);
+
+    @InitialBooleanValue(true)
+    boolean isFirstNull();
+
+    void setFirstNull(boolean firstNull);
+
+    long getSecond();
+
+    void setSecond(long second);
+
+    @InitialBooleanValue(true)
+    boolean isSecondNull();
+
+    void setSecondNull(boolean secondNull);
 }

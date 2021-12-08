@@ -278,10 +278,8 @@ import static io.trino.SystemSessionProperties.isEnableCoordinatorDynamicFilters
 import static io.trino.SystemSessionProperties.isEnableLargeDynamicFilters;
 import static io.trino.SystemSessionProperties.isExchangeCompressionEnabled;
 import static io.trino.SystemSessionProperties.isLateMaterializationEnabled;
-import static io.trino.SystemSessionProperties.isSpillDistinctingAggregationsEnabled;
 import static io.trino.SystemSessionProperties.isSpillEnabled;
 import static io.trino.SystemSessionProperties.isSpillOrderBy;
-import static io.trino.SystemSessionProperties.isSpillOrderingAggregationsEnabled;
 import static io.trino.SystemSessionProperties.isSpillWindowOperator;
 import static io.trino.operator.DistinctLimitOperator.DistinctLimitOperatorFactory;
 import static io.trino.operator.HashArraySizeSupplier.incrementalLoadFactorHashArraySizeSupplier;
@@ -1548,7 +1546,12 @@ public class LocalExecutionPlanner
                         }
                     }
 
-                    matchAggregations.add(new MatchAggregationInstantiator(internalAggregationFunction, valueChannels, lambdaProviders, new SetEvaluatorSupplier(pointer.getSetDescriptor(), mapping)));
+                    matchAggregations.add(new MatchAggregationInstantiator(
+                            pointer.getFunction().getSignature().getName(),
+                            internalAggregationFunction,
+                            valueChannels,
+                            lambdaProviders,
+                            new SetEvaluatorSupplier(pointer.getSetDescriptor(), mapping)));
                     labelDependencies.add(new MatchAggregationLabelDependency(
                             pointer.getSetDescriptor().getLabels().stream()
                                     .map(mapping::get)
@@ -1742,14 +1745,7 @@ public class LocalExecutionPlanner
             boolean spillEnabled = isSpillEnabled(session);
             DataSize unspillMemoryLimit = getAggregationOperatorUnspillMemoryLimit(session);
 
-            return planGroupByAggregation(
-                    node,
-                    source,
-                    spillEnabled,
-                    isSpillDistinctingAggregationsEnabled(session),
-                    isSpillOrderingAggregationsEnabled(session),
-                    unspillMemoryLimit,
-                    context);
+            return planGroupByAggregation(node, source, spillEnabled, unspillMemoryLimit, context);
         }
 
         @Override
@@ -3125,8 +3121,6 @@ public class LocalExecutionPlanner
                         false,
                         false,
                         false,
-                        false,
-                        false,
                         DataSize.ofBytes(0),
                         context,
                         STATS_START_CHANNEL,
@@ -3208,8 +3202,6 @@ public class LocalExecutionPlanner
                         Optional.empty(),
                         Optional.empty(),
                         source,
-                        false,
-                        false,
                         false,
                         false,
                         false,
@@ -3518,8 +3510,7 @@ public class LocalExecutionPlanner
 
         private AccumulatorFactory buildAccumulatorFactory(
                 PhysicalOperation source,
-                Aggregation aggregation,
-                boolean spillEnabled)
+                Aggregation aggregation)
         {
             InternalAggregationFunction internalAggregationFunction = metadata.getAggregateFunctionImplementation(aggregation.getResolvedFunction());
 
@@ -3564,7 +3555,6 @@ public class LocalExecutionPlanner
                     joinCompiler,
                     blockTypeOperators,
                     lambdaProviders,
-                    spillEnabled,
                     session);
         }
 
@@ -3652,7 +3642,7 @@ public class LocalExecutionPlanner
             for (Map.Entry<Symbol, Aggregation> entry : aggregations.entrySet()) {
                 Symbol symbol = entry.getKey();
                 Aggregation aggregation = entry.getValue();
-                accumulatorFactories.add(buildAccumulatorFactory(source, aggregation, false));
+                accumulatorFactories.add(buildAccumulatorFactory(source, aggregation));
                 outputMappings.put(symbol, outputChannel); // one aggregation per channel
                 outputChannel++;
             }
@@ -3663,8 +3653,6 @@ public class LocalExecutionPlanner
                 AggregationNode node,
                 PhysicalOperation source,
                 boolean spillEnabled,
-                boolean spillDistinctingAggregationsEnabled,
-                boolean spillOrderingAggregationsEnabled,
                 DataSize unspillMemoryLimit,
                 LocalExecutionPlanContext context)
         {
@@ -3680,8 +3668,6 @@ public class LocalExecutionPlanner
                     source,
                     node.hasDefaultOutput(),
                     spillEnabled,
-                    spillDistinctingAggregationsEnabled,
-                    spillOrderingAggregationsEnabled,
                     node.isStreamable(),
                     unspillMemoryLimit,
                     context,
@@ -3704,8 +3690,6 @@ public class LocalExecutionPlanner
                 PhysicalOperation source,
                 boolean hasDefaultOutput,
                 boolean spillEnabled,
-                boolean distinctSpillEnabled,
-                boolean orderBySpillEnabled,
                 boolean isStreamable,
                 DataSize unspillMemoryLimit,
                 LocalExecutionPlanContext context,
@@ -3717,12 +3701,11 @@ public class LocalExecutionPlanner
         {
             List<Symbol> aggregationOutputSymbols = new ArrayList<>();
             List<AccumulatorFactory> accumulatorFactories = new ArrayList<>();
-            boolean useSpill = spillEnabled && !isStreamable && (!hasDistinct(aggregations) || distinctSpillEnabled) && (!hasOrderBy(aggregations) || orderBySpillEnabled);
             for (Map.Entry<Symbol, Aggregation> entry : aggregations.entrySet()) {
                 Symbol symbol = entry.getKey();
                 Aggregation aggregation = entry.getValue();
 
-                accumulatorFactories.add(buildAccumulatorFactory(source, aggregation, useSpill));
+                accumulatorFactories.add(buildAccumulatorFactory(source, aggregation));
                 aggregationOutputSymbols.add(symbol);
             }
 
@@ -3779,23 +3762,13 @@ public class LocalExecutionPlanner
                         groupIdChannel,
                         expectedGroups,
                         maxPartialAggregationMemorySize,
-                        useSpill,
+                        spillEnabled,
                         unspillMemoryLimit,
                         spillerFactory,
                         joinCompiler,
                         blockTypeOperators,
                         useSystemMemory);
             }
-        }
-
-        private boolean hasDistinct(Map<Symbol, Aggregation> aggregations)
-        {
-            return aggregations.values().stream().anyMatch(aggregation -> aggregation.isDistinct());
-        }
-
-        private boolean hasOrderBy(Map<Symbol, Aggregation> aggregations)
-        {
-            return aggregations.values().stream().anyMatch(aggregation -> aggregation.getOrderingScheme().isPresent());
         }
     }
 
