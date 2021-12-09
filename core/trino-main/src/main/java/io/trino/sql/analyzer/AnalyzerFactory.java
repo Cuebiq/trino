@@ -13,7 +13,6 @@
  */
 package io.trino.sql.analyzer;
 
-import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.execution.warnings.WarningCollector;
 import io.trino.metadata.Metadata;
@@ -39,14 +38,12 @@ public class AnalyzerFactory
     private final AccessControl accessControl;
     private final GroupProvider groupProvider;
     private final StatementRewrite statementRewrite;
-    private boolean hideInaccesibleColumns;
 
     @Inject
     public AnalyzerFactory(
             Metadata metadata,
             SqlParser sqlParser,
             AccessControl accessControl,
-            FeaturesConfig featuresConfig,
             GroupProvider groupProvider,
             StatementRewrite statementRewrite)
     {
@@ -55,7 +52,6 @@ public class AnalyzerFactory
         this.accessControl = requireNonNull(accessControl, "accessControl is null");
         this.groupProvider = requireNonNull(groupProvider, "groupProvider is null");
         this.statementRewrite = requireNonNull(statementRewrite, "statementRewrite is null");
-        this.hideInaccesibleColumns = requireNonNull(featuresConfig, "featuresConfig is null").isHideInaccesibleColumns();
     }
 
     public Analyzer createAnalyzer(
@@ -74,7 +70,6 @@ public class AnalyzerFactory
                 parameters,
                 parameterLookup,
                 warningCollector,
-                statementRewrite,
-                hideInaccesibleColumns);
+                statementRewrite);
     }
 }

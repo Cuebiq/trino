@@ -218,16 +218,13 @@ public class Analysis
     private final Multimap<Field, SourceColumn> originColumnDetails = ArrayListMultimap.create();
     private final Multimap<NodeRef<Expression>, Field> fieldLineage = ArrayListMultimap.create();
 
-    private boolean hideInaccessibleColumns;
-
     private Optional<TableExecuteHandle> tableExecuteHandle = Optional.empty();
 
-    public Analysis(@Nullable Statement root, Map<NodeRef<Parameter>, Expression> parameters, QueryType queryType, boolean hideInaccessibleColumns)
+    public Analysis(@Nullable Statement root, Map<NodeRef<Parameter>, Expression> parameters, QueryType queryType)
     {
         this.root = root;
         this.parameters = ImmutableMap.copyOf(requireNonNull(parameters, "parameters is null"));
         this.queryType = requireNonNull(queryType, "queryType is null");
-        this.hideInaccessibleColumns = hideInaccessibleColumns;
     }
 
     public Statement getStatement()
@@ -238,11 +235,6 @@ public class Analysis
     public String getUpdateType()
     {
         return updateType;
-    }
-
-    public boolean isHideInaccesibleColumns()
-    {
-        return hideInaccessibleColumns;
     }
 
     public Optional<Output> getTarget()

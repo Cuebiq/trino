@@ -46,6 +46,7 @@ public class TestFilterInaccessibleColumns
     private static final Session SESSION = testSessionBuilder()
             .setCatalog(CATALOG)
             .setSchema(TINY_SCHEMA_NAME)
+            .setSystemProperty("hide_inaccessible_columns", "true")
             .setIdentity(Identity.forUser(USER).build())
             .build();
 
@@ -102,7 +103,6 @@ public class TestFilterInaccessibleColumns
                         .filter(materializedRow -> materializedRow.getField(0).equals("comment"))
                         .findFirst()
                         .isPresent());
-
     }
 
     @Test
@@ -232,8 +232,7 @@ public class TestFilterInaccessibleColumns
     {
         assertThat(assertions.query("SELECT * FROM nation,customer WHERE customer.nationkey = nation.nationkey AND nation.name = 'FRANCE' AND customer.name='Customer#000001477'"))
                 .matches(materializedRows ->
-                    materializedRows.getMaterializedRows().get(0).getField(11).equals("ites nag blithely alongside of the ironic accounts. accounts use. carefully silent deposits")
-                );
+                    materializedRows.getMaterializedRows().get(0).getField(11).equals("ites nag blithely alongside of the ironic accounts. accounts use. carefully silent deposits"));
     }
 
     @Test
@@ -242,8 +241,7 @@ public class TestFilterInaccessibleColumns
         accessControl.deny(privilege(USER, "nation.comment", SELECT_COLUMN));
         assertThat(assertions.query("SELECT * FROM nation,customer WHERE customer.nationkey = nation.nationkey AND nation.name = 'FRANCE' AND customer.name='Customer#000001477'"))
                 .matches(materializedRows ->
-                        materializedRows.getMaterializedRows().get(0).getFields().size() == 11
-                );
+                        materializedRows.getMaterializedRows().get(0).getFields().size() == 11);
     }
 
     @Test
@@ -267,5 +265,4 @@ public class TestFilterInaccessibleColumns
         assertThatThrownBy(() -> assertions.query("SELECT * FROM (SELECT concat(name,'-test') FROM nation WHERE name = 'FRANCE')"))
                 .hasMessage("Access Denied: Cannot select from columns [name] in table or view local.tiny.nation");
     }
-
 }

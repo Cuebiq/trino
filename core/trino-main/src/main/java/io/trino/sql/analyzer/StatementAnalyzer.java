@@ -24,6 +24,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Streams;
 import io.trino.Session;
+import io.trino.SystemSessionProperties;
 import io.trino.connector.CatalogName;
 import io.trino.execution.Column;
 import io.trino.execution.warnings.WarningCollector;
@@ -3192,7 +3193,7 @@ class StatementAnalyzer
 
         private List<Field> filterInaccessibleFields(List<Field> fields)
         {
-            if (!analysis.isHideInaccesibleColumns()) {
+            if (!SystemSessionProperties.isHideInaccesibleColumns(session)) {
                 return fields;
             }
 
@@ -3202,21 +3203,20 @@ class StatementAnalyzer
             ListMultimap<QualifiedObjectName, Field> tableFieldsMap = Multimaps.newListMultimap(new HashMap<QualifiedObjectName, Collection<Field>>(), () -> new LinkedList<>());
             fields.forEach(field -> {
                 Optional<QualifiedObjectName> originTable = field.getOriginTable();
-                if(originTable.isPresent()) {
+                if (originTable.isPresent()) {
                     tableFieldsMap.put(originTable.get(), field);
                 }
                 else {
-                    // keep constant fields accessible
+                    // keep anonymous fields accessible
                     accessibleFields.add(field);
                 }
             });
 
             tableFieldsMap.asMap().forEach((table, tableFields) -> {
-                Set<String> accessibleColumns =
-                        accessControl.filterColumns(
-                                session.toSecurityContext(),
-                                table.asCatalogSchemaTableName(),
-                                tableFields.stream().map(field -> field.getOriginColumnName().get()).collect(Collectors.toSet()));
+                Set<String> accessibleColumns = accessControl.filterColumns(
+                        session.toSecurityContext(),
+                        table.asCatalogSchemaTableName(),
+                        tableFields.stream().map(field -> field.getOriginColumnName().get()).collect(Collectors.toSet()));
                 accessibleFields.addAll(tableFields.stream()
                         .filter(field -> accessibleColumns.contains(field.getOriginColumnName().get()))
                         .collect(toImmutableList()));

@@ -950,7 +950,6 @@ public class LocalQueryRunner
                 metadata,
                 sqlParser,
                 accessControl,
-                featuresConfig,
                 groupProvider,
                 new StatementRewrite(ImmutableSet.of(
                         new DescribeInputRewrite(sqlParser),

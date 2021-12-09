@@ -17,7 +17,6 @@ package io.trino.execution;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.connector.CatalogName;
 import io.trino.execution.warnings.WarningCollector;
@@ -129,7 +128,7 @@ public class TestCreateMaterializedViewTask
                 materializedViewPropertyManager,
                 testCatalog.getConnectorCatalogName());
         parser = new SqlParser();
-        analyzerFactory = new AnalyzerFactory(metadata, parser, new AllowAllAccessControl(), new FeaturesConfig(), new TestingGroupProvider(), new StatementRewrite(ImmutableSet.of()));
+        analyzerFactory = new AnalyzerFactory(metadata, parser, new AllowAllAccessControl(), new TestingGroupProvider(), new StatementRewrite(ImmutableSet.of()));
         queryStateMachine = stateMachine(transactionManager, createTestMetadataManager(), new AllowAllAccessControl());
     }
 
@@ -205,7 +204,7 @@ public class TestCreateMaterializedViewTask
         accessControl.loadSystemAccessControl(AllowAllSystemAccessControl.NAME, ImmutableMap.of());
         accessControl.deny(privilege("test_mv", CREATE_MATERIALIZED_VIEW));
 
-        AnalyzerFactory analyzerFactory = new AnalyzerFactory(metadata, parser, accessControl, new FeaturesConfig(), new TestingGroupProvider(), new StatementRewrite(ImmutableSet.of()));
+        AnalyzerFactory analyzerFactory = new AnalyzerFactory(metadata, parser, accessControl, new TestingGroupProvider(), new StatementRewrite(ImmutableSet.of()));
         assertThatThrownBy(() -> getFutureValue(new CreateMaterializedViewTask(metadata, accessControl, parser, analyzerFactory)
                 .execute(statement, queryStateMachine, ImmutableList.of(), WarningCollector.NOOP)))
                 .isInstanceOf(AccessDeniedException.class)
