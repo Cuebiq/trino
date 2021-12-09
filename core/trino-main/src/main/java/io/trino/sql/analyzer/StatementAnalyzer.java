@@ -3195,11 +3195,21 @@ class StatementAnalyzer
             if (!analysis.isHideInaccesibleColumns()) {
                 return fields;
             }
-            //collect fields by table
-            ListMultimap<QualifiedObjectName, Field> tableFieldsMap = Multimaps.newListMultimap(new HashMap<QualifiedObjectName, Collection<Field>>(), () -> new LinkedList<>());
-            fields.forEach(field -> tableFieldsMap.put(field.getOriginTable().get(), field));
 
             List<Field> accessibleFields = new ArrayList<>();
+
+            //collect fields by table
+            ListMultimap<QualifiedObjectName, Field> tableFieldsMap = Multimaps.newListMultimap(new HashMap<QualifiedObjectName, Collection<Field>>(), () -> new LinkedList<>());
+            fields.forEach(field -> {
+                Optional<QualifiedObjectName> originTable = field.getOriginTable();
+                if(originTable.isPresent()) {
+                    tableFieldsMap.put(originTable.get(), field);
+                }
+                else {
+                    // keep constant fields accessible
+                    accessibleFields.add(field);
+                }
+            });
 
             tableFieldsMap.asMap().forEach((table, tableFields) -> {
                 Set<String> accessibleColumns =
@@ -3209,11 +3219,13 @@ class StatementAnalyzer
                                 tableFields.stream().map(field -> field.getOriginColumnName().get()).collect(Collectors.toSet()));
                 accessibleFields.addAll(tableFields.stream()
                         .filter(field -> accessibleColumns.contains(field.getOriginColumnName().get()))
-                        .collect(Collectors.toList()));
+                        .collect(toImmutableList()));
             });
 
             //filter at the end for preserving the global order
-            return fields.stream().filter(field -> accessibleFields.contains(field)).collect(Collectors.toList());
+            return fields.stream()
+                .filter(field -> accessibleFields.contains(field))
+                .collect(toImmutableList());
         }
 
         private void analyzeAllColumnsFromTable(
