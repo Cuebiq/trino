@@ -69,6 +69,18 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-core</artifactId>
+            <version>${dep.aws-sdk.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-secretsmanager</artifactId>
+            <version>${dep.aws-sdk.version}</version>
+        </dependency>
+
         <!-- for testing -->
         <dependency>
             <groupId>io.prestosql</groupId>

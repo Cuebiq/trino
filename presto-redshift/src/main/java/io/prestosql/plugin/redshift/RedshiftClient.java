@@ -41,7 +41,7 @@ public class RedshiftClient
         extends BaseJdbcClient
 {
     @Inject
-    public RedshiftClient(BaseJdbcConfig config, ConnectionFactory connectionFactory)
+    public RedshiftClient(RedshiftConfig config, ConnectionFactory connectionFactory)
     {
         super(config, "\"", connectionFactory);
     }

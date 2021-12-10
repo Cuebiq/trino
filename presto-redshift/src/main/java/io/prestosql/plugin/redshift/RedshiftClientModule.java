@@ -13,18 +13,21 @@
  */
 package io.prestosql.plugin.redshift;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
-import io.prestosql.plugin.jdbc.BaseJdbcConfig;
 import io.prestosql.plugin.jdbc.ConnectionFactory;
 import io.prestosql.plugin.jdbc.DriverConnectionFactory;
 import io.prestosql.plugin.jdbc.ForBaseJdbc;
 import io.prestosql.plugin.jdbc.JdbcClient;
 import io.prestosql.plugin.jdbc.credential.CredentialProvider;
+import io.prestosql.plugin.jdbc.credential.DefaultCredentialPropertiesProvider;
 import org.postgresql.Driver;
+
+import java.util.Properties;
 
 public class RedshiftClientModule
         implements Module
@@ -38,8 +41,18 @@ public class RedshiftClientModule
     @Singleton
     @Provides
     @ForBaseJdbc
-    public static ConnectionFactory getConnectionFactory(BaseJdbcConfig config, CredentialProvider credentialProvider)
+    public static ConnectionFactory getConnectionFactory(RedshiftConfig config, CredentialProvider credentialProvider)
     {
-        return new DriverConnectionFactory(new Driver(), config, credentialProvider);
+        Properties redshiftConnectionProperties = new Properties();
+
+        AwsSecretManager asm = new AwsSecretManager();
+        JsonNode secretsJson = asm.getSecret(config.getSecretName());
+
+        redshiftConnectionProperties.put("user", secretsJson.get("username").textValue());
+        redshiftConnectionProperties.put("password", secretsJson.get("password").textValue());
+
+        return new DriverConnectionFactory(
+                new Driver(), config.getConnectionUrl(), redshiftConnectionProperties, new DefaultCredentialPropertiesProvider(credentialProvider)
+        );
     }
 }
