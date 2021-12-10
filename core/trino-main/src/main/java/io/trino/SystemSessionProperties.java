@@ -1008,7 +1008,7 @@ public final class SystemSessionProperties
     private static void validateHideInaccesibleColumns(boolean value, boolean defaultValue)
     {
         if (defaultValue == true && value == false) {
-            throw new TrinoException(INVALID_SESSION_PROPERTY, "hide_inaccessible_columns cannot be set to false if default value is true");
+            throw new TrinoException(INVALID_SESSION_PROPERTY, format("%s cannot be disabled with session property when it was enabled with configuration", HIDE_INACCESSIBLE_COLUMNS));
         }
     }
 

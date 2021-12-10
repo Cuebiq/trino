@@ -3216,13 +3216,12 @@ class StatementAnalyzer
                 Set<String> accessibleColumns = accessControl.filterColumns(
                         session.toSecurityContext(),
                         table.asCatalogSchemaTableName(),
-                        tableFields.stream().map(field -> field.getOriginColumnName().get()).collect(Collectors.toSet()));
+                        tableFields.stream().map(field -> field.getOriginColumnName().get()).collect(toImmutableSet()));
                 accessibleFields.addAll(tableFields.stream()
                         .filter(field -> accessibleColumns.contains(field.getOriginColumnName().get()))
                         .collect(toImmutableList()));
             });
 
-            //filter at the end for preserving the global order
             return fields.stream()
                 .filter(field -> accessibleFields.contains(field))
                 .collect(toImmutableList());

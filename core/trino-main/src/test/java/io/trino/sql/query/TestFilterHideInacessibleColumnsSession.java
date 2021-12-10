@@ -22,10 +22,10 @@ import io.trino.execution.scheduler.NodeSchedulerConfig;
 import io.trino.memory.MemoryManagerConfig;
 import io.trino.memory.NodeMemoryConfig;
 import io.trino.metadata.SessionPropertyManager;
-import org.assertj.core.api.Assertions;
 import org.testng.annotations.Test;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public class TestFilterHideInacessibleColumnsSession
 {
@@ -43,7 +43,7 @@ public class TestFilterHideInacessibleColumnsSession
                 new DynamicFilterConfig(),
                 new NodeSchedulerConfig()));
         assertThatThrownBy(() -> sessionPropertyManager.validateSystemSessionProperty(SystemSessionProperties.HIDE_INACCESSIBLE_COLUMNS, "false"))
-                .hasMessage("hide_inaccessible_columns cannot be set to false if default value is true");
+                .hasMessage("hide_inaccessible_columns cannot be disabled with session property when it was enabled with configuration");
     }
 
     @Test
@@ -59,7 +59,7 @@ public class TestFilterHideInacessibleColumnsSession
                 new NodeMemoryConfig(),
                 new DynamicFilterConfig(),
                 new NodeSchedulerConfig()));
-        Assertions.assertThatNoException().isThrownBy(() -> sessionPropertyManager.validateSystemSessionProperty(SystemSessionProperties.HIDE_INACCESSIBLE_COLUMNS, "true"));
+        assertThatNoException().isThrownBy(() -> sessionPropertyManager.validateSystemSessionProperty(SystemSessionProperties.HIDE_INACCESSIBLE_COLUMNS, "true"));
     }
 
     @Test
@@ -74,7 +74,7 @@ public class TestFilterHideInacessibleColumnsSession
                 new NodeMemoryConfig(),
                 new DynamicFilterConfig(),
                 new NodeSchedulerConfig()));
-        Assertions.assertThatNoException().isThrownBy(() -> sessionPropertyManager.validateSystemSessionProperty(SystemSessionProperties.HIDE_INACCESSIBLE_COLUMNS, "false"));
+        assertThatNoException().isThrownBy(() -> sessionPropertyManager.validateSystemSessionProperty(SystemSessionProperties.HIDE_INACCESSIBLE_COLUMNS, "false"));
     }
 
     @Test
@@ -89,6 +89,6 @@ public class TestFilterHideInacessibleColumnsSession
                 new NodeMemoryConfig(),
                 new DynamicFilterConfig(),
                 new NodeSchedulerConfig()));
-        Assertions.assertThatNoException().isThrownBy(() -> sessionPropertyManager.validateSystemSessionProperty(SystemSessionProperties.HIDE_INACCESSIBLE_COLUMNS, "true"));
+        assertThatNoException().isThrownBy(() -> sessionPropertyManager.validateSystemSessionProperty(SystemSessionProperties.HIDE_INACCESSIBLE_COLUMNS, "true"));
     }
 }
