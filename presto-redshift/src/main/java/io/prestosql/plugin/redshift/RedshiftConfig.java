@@ -31,22 +31,28 @@ public class RedshiftConfig
     protected String secretName;
     protected String jdbcAccessClass;
 
-    public String getSecretName()
+    public String getJdbcAccessClass()
     {
-        return this.secretName;
+        return this.jdbcAccessClass;
     }
 
     @Config("jdbc.access-class")
-    @ConfigDescription("This value can be used to restrict the type of operations that can be done with a specific connection. Possible values are: all, read call, read only.")
+    @ConfigDescription("This value can be used to restrict the type of operations that can be done with a specific connection. Possible values are: all, read-call, read-only.")
     public RedshiftConfig setJdbcAccessClass(String accessClass){
-        final List<String> accessClasses = Arrays.asList("all", "read call", "read only");
+        final List<String> accessClasses = Arrays.asList("all", "read-call", "read-only");
         if(accessClasses.contains(accessClass)){
-            this.jdbcAccessClass = accessClass;
+            this.jdbcAccessClass = accessClass.replace("-", " ");
         } else {
+            log.warn("You have provided JDBC Access Class = " + accessClass);
             throw new IllegalArgumentException("JDBC Access Class was not any of: all, read call, read only.");
         }
 
         return this;
+    }
+
+    public String getSecretName()
+    {
+        return this.secretName;
     }
 
     @Config("redshift.secret-name")

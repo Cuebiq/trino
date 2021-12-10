@@ -29,6 +29,8 @@ import org.postgresql.Driver;
 
 import java.util.Properties;
 
+import static io.airlift.configuration.ConfigBinder.configBinder;
+
 public class RedshiftClientModule
         implements Module
 {
@@ -36,6 +38,7 @@ public class RedshiftClientModule
     public void configure(Binder binder)
     {
         binder.bind(JdbcClient.class).annotatedWith(ForBaseJdbc.class).to(RedshiftClient.class).in(Scopes.SINGLETON);
+        configBinder(binder).bindConfig(RedshiftConfig.class);
     }
 
     @Singleton
@@ -50,6 +53,7 @@ public class RedshiftClientModule
 
         redshiftConnectionProperties.put("user", secretsJson.get("username").textValue());
         redshiftConnectionProperties.put("password", secretsJson.get("password").textValue());
+        redshiftConnectionProperties.put("access", config.getJdbcAccessClass());
 
         return new DriverConnectionFactory(
                 new Driver(), config.getConnectionUrl(), redshiftConnectionProperties, new DefaultCredentialPropertiesProvider(credentialProvider)
