@@ -13,7 +13,6 @@
  */
 package io.trino.sql.query;
 
-import io.trino.FeaturesConfig;
 import io.trino.SystemSessionProperties;
 import io.trino.execution.DynamicFilterConfig;
 import io.trino.execution.QueryManagerConfig;
@@ -22,6 +21,7 @@ import io.trino.execution.scheduler.NodeSchedulerConfig;
 import io.trino.memory.MemoryManagerConfig;
 import io.trino.memory.NodeMemoryConfig;
 import io.trino.metadata.SessionPropertyManager;
+import io.trino.sql.analyzer.FeaturesConfig;
 import org.testng.annotations.Test;
 
 import static org.assertj.core.api.Assertions.assertThatNoException;
