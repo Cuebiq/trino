@@ -14,12 +14,12 @@
 package io.trino.sql.query;
 
 import com.google.common.collect.ImmutableMap;
-import io.trino.FeaturesConfig;
 import io.trino.Session;
 import io.trino.metadata.QualifiedObjectName;
 import io.trino.plugin.tpch.TpchConnectorFactory;
 import io.trino.spi.security.Identity;
 import io.trino.spi.security.ViewExpression;
+import io.trino.sql.analyzer.FeaturesConfig;
 import io.trino.testing.LocalQueryRunner;
 import io.trino.testing.TestingAccessControlManager;
 import org.testng.annotations.AfterClass;
